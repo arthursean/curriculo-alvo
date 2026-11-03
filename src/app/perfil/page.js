@@ -157,7 +157,7 @@ export default function Perfil() {
       <section className="card stack">
         <div className="row between">
           <h2 style={{ margin: 0 }}>Formação</h2>
-          <button className="btn sec sm" onClick={() => adicionar("formacao", { curso: "", instituicao: "", inicio: "", fim: "", status: "Concluído" })}>+ Adicionar formação</button>
+          <button className="btn sec sm" onClick={() => adicionar("formacao", { curso: "", instituicao: "", inicio: "", fim: "", status: "Concluído", descricao: "" })}>+ Adicionar formação</button>
         </div>
         {perfil.formacao.length === 0 && <p className="muted" style={{ margin: 0 }}>Nenhuma formação ainda.</p>}
         {perfil.formacao.map((f) => (
@@ -173,6 +173,16 @@ export default function Perfil() {
               <Campo rotulo="Início"><MesAno valor={f.inicio} onChange={(v) => setLista("formacao", f.id, "inicio", v)} /></Campo>
               <Campo rotulo="Conclusão (ou previsão)"><MesAno valor={f.fim} anosFuturos={8} onChange={(v) => setLista("formacao", f.id, "fim", v)} /></Campo>
               <div style={{ alignSelf: "end" }}><button className="btn ghost sm" onClick={() => remover("formacao", f.id)}>Remover</button></div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Campo rotulo="Descrição (opcional, um tópico por linha)">
+                <textarea
+                  value={f.descricao || ""}
+                  onChange={(ev) => setLista("formacao", f.id, "descricao", ev.target.value)}
+                  placeholder={"TCC: análise de churn com Python e SQL (nota 10)\nDisciplinas: Estatística, Banco de Dados, Machine Learning\nMonitoria de Programação por 2 semestres"}
+                  style={{ minHeight: 72 }}
+                />
+              </Campo>
             </div>
           </div>
         ))}

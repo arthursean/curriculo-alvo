@@ -78,7 +78,7 @@ function universoDeSkills(perfil) {
 function skillsDoPerfil(perfil, universo) {
   const textoLivre = [
     perfil.titulo, perfil.resumo, perfil.certificacoes.join("\n"),
-    ...perfil.experiencias.map((e) => `${e.cargo}\n${e.descricao}`), ...perfil.formacao.map((f) => f.curso),
+    ...perfil.experiencias.map((e) => `${e.cargo}\n${e.descricao}`), ...perfil.formacao.map((f) => `${f.curso}\n${f.descricao || ""}`),
     ...(perfil.projetos || []).map((p) => `${p.nome}\n${p.tecnologias}\n${p.descricao}`),
   ].join("\n");
   const tem = new Map(); // nome -> { origem, exibir }
@@ -253,6 +253,16 @@ export function personalizar(perfil, vaga) {
     .map(({ _p, _o, ...p }, i) => (_p <= 2 && i > 0 && p.itens.length > 2 ? { ...p, itens: p.itens.slice(0, 2) } : p))
     .map((p) => ({ ...p, itens: p.itens.map(anotar) }));
 
+  // Formação: a ordem dos cursos não muda (é cronológica), mas os tópicos da descrição
+  // vêm na ordem do que a vaga pede.
+  const formacao = perfil.formacao.map((f) => ({
+    ...f,
+    itens: linhas(f.descricao)
+      .map((l, i) => ({ l, i, p: pontuar(l) }))
+      .sort((a, b) => b.p - a.p || a.i - b.i)
+      .map((x) => anotar(x.l)),
+  }));
+
   // ---- Compatibilidade ----------------------------------------------------------------
   const pesoTotal = termos.reduce((s, t) => s + t.peso * (t.obrigatorio ? 1.5 : 1), 0);
   const pesoAtendido = termos.reduce((s, t) => s + t.peso * (t.obrigatorio ? 1.5 : 1) * CREDITO[t.tipo], 0);
@@ -351,6 +361,7 @@ export function personalizar(perfil, vaga) {
     palavras,
     experiencias,
     projetos,
+    formacao,
     compatibilidade: Math.max(0, Math.min(100, compatibilidade)),
     atendidos: listaAtendidos,
     relacionados: parecidos.map((t) => `${t.nome} (você tem ${exibir(t.via)})`),

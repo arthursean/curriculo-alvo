@@ -177,7 +177,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .cv li { margin-bottom: 2px; }
 .cv .skills { display: flex; flex-wrap: wrap; gap: 5px; }
 .cv .skill { border: 1px solid #dfe3ec; border-radius: 4px; padding: 1px 8px; font-size: 12px; }
-.cv .skill.destaque { background: #e8ecfd; border-color: #c4cdf7; color: #2a41b8; font-weight: 600; }
+/* Todas as competências com o mesmo visual (as da vaga só vêm primeiro na lista). */
 
 @media print {
   @page { size: A4; margin: 12mm; }
@@ -185,5 +185,4 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
   .nao-imprimir, .nav { display: none !important; }
   .container { padding: 0; max-width: none; }
   .cv, .cv-editando .cv { box-shadow: none; padding: 0; max-width: none; }
-  .cv .skill.destaque { background: none; border-color: #dfe3ec; color: inherit; font-weight: normal; }
 }

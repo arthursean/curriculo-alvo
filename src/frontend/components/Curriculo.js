@@ -39,8 +39,8 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
   const titulo = ajuste?.titulo || perfil.titulo;
   const resumo = ajuste?.resumo ?? perfil.resumo;
   const competencias = ajuste?.competencias || perfil.competencias;
-  const destaques = new Set(ajuste?.destaques || []);
   const experiencias = ajuste?.experiencias || perfil.experiencias;
+  const formacao = ajuste?.formacao || perfil.formacao;
   const projetos = (ajuste?.projetos || perfil.projetos || []).filter((p) => p.nome?.trim() || p.descricao?.trim());
   const contato = [perfil.email, perfil.telefone, perfil.cidade, perfil.linkedin, perfil.site].filter(Boolean);
   const re = regexPalavras(ajuste?.palavras);
@@ -67,7 +67,7 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
           <h2>{r.competencias}</h2>
           <div className="skills">
             {competencias.map((c) => (
-              <span key={c} className={`skill ${destaques.has(c) ? "destaque" : ""}`}>{c}</span>
+              <span key={c} className="skill">{c}</span>
             ))}
           </div>
         </section>
@@ -107,15 +107,16 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
         </section>
       )}
 
-      {perfil.formacao.length > 0 && (
+      {formacao.length > 0 && (
         <section>
           <h2>{r.formacao}</h2>
-          {perfil.formacao.map((f) => (
+          {formacao.map((f) => (
             <div key={f.id} className="exp">
               <div className="exp-topo">
                 <div><strong>{f.curso}</strong>{f.instituicao && ` · ${f.instituicao}`}{f.status && f.status !== "Concluído" && <span style={{ color: "#666" }}> · {r.status[f.status] || f.status}</span>}</div>
                 <span className="periodo">{periodo(f.inicio, f.fim, false, r)}</span>
               </div>
+              {itensDe(f).length > 0 && <ul>{itensDe(f).map((l, i) => <li key={i}><Destacar texto={l} re={re} /></li>)}</ul>}
             </div>
           ))}
         </section>
