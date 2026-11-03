@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "db:setup": "node --env-file=.env.local scripts/db-setup.mjs"
+    "db:setup": "node --env-file=.env.local scripts/db-setup.mjs",
+    "checar": "node scripts/checar-camadas.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

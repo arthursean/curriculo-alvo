@@ -260,7 +260,7 @@ O banco da branch `main` ainda está vazio. Para criar as tabelas:
 
 1. No Neon, abra o projeto → **SQL Editor**.
 2. Confira se a branch selecionada no topo é **main**.
-3. No VS Code, abra o arquivo `db/schema.sql`, copie **todo** o conteúdo e cole no SQL Editor.
+3. No VS Code, abra o arquivo `src/backend/db/schema.sql`, copie **todo** o conteúdo e cole no SQL Editor.
 4. Clique em **Run**. Deve aparecer uma mensagem de sucesso. Em **Tables** você verá `usuarios`, `sessoes`, `perfis` e as demais.
 
 ### 6.6 Testar em produção
@@ -289,7 +289,7 @@ git push
 
 O Vercel percebe o push e publica a nova versão sozinho, em cerca de 1 minuto. Se der erro, o site continua na versão anterior: nada quebra para os usuários.
 
-Se alguma atualização mudar o `db/schema.sql`, rode o arquivo de novo no SQL Editor do Neon. Ele só cria o que estiver faltando.
+Se alguma atualização mudar o `src/backend/db/schema.sql`, rode o arquivo de novo no SQL Editor do Neon. Ele só cria o que estiver faltando.
 
 ---
 

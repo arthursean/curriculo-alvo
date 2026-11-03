@@ -18,16 +18,19 @@ npm run db:setup
 npm run dev
 ```
 
-O passo a passo completo, incluindo publicação no GitHub e no Vercel, está em [TUTORIAL-VERCEL.md](TUTORIAL-VERCEL.md).
+A organização do código (front, back e shared) está em [ARQUITETURA.md](ARQUITETURA.md). O passo a passo completo, incluindo publicação no GitHub e no Vercel, está em [TUTORIAL-VERCEL.md](TUTORIAL-VERCEL.md).
 
 ## Como funciona a personalização
 
-Arquivo `lib/personalizar.js`, executado no navegador:
+Arquivo `src/shared/personalizar.js`, executado no navegador:
 
-1. Extrai da vaga as competências pedidas, usando um dicionário com sinônimos em português e inglês mais as competências do próprio perfil.
-2. Dá peso a cada uma: mais peso se aparece no título, em "requisitos" ou várias vezes; menos peso em "diferenciais".
-3. Cruza com o perfil para calcular a compatibilidade, ordenar competências, experiências e tópicos, e apontar lacunas, idiomas exigidos e diferença de senioridade.
-4. Monta o resumo com fatos do perfil. Nada é inventado.
+1. Extrai da vaga as skills pedidas usando a taxonomia própria de `src/shared/skills.js`: cerca de 250 skills com sinônimos em português e inglês e uma hierarquia (PostgreSQL → SQL → Banco de dados).
+2. Dá peso a cada skill: mais peso se aparece no título, em "requisitos" ou várias vezes; menos peso em "diferenciais" e nas categorias genéricas.
+3. Cruza com o perfil em três níveis:
+   - **direto:** você tem a skill pedida;
+   - **implícito:** você tem uma skill mais específica que a implica (PostgreSQL atende "SQL");
+   - **parecido:** você tem uma skill irmã (a vaga pede MySQL e você tem PostgreSQL), que vale meio ponto.
+4. Reescreve o currículo: título com as skills pedidas, resumo na linguagem da vaga ("SQL (PostgreSQL)"), competências e tópicos reordenados, anotações e palavras-chave em negrito. Nada é inventado.
 
 ## Tradução do currículo
 

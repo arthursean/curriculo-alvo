@@ -9,7 +9,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const sql = neon(process.env.DATABASE_URL);
-const schema = await readFile(new URL("../db/schema.sql", import.meta.url), "utf8");
+const schema = await readFile(new URL("../src/backend/db/schema.sql", import.meta.url), "utf8");
 const comandos = schema
   .split("\n")
   .filter((l) => !l.trim().startsWith("--"))
