@@ -1,7 +1,7 @@
-// Cria as tabelas no banco apontado por DATABASE_URL.
+// Cria as tabelas no banco apontado por DATABASE_URL (o site também faz isso sozinho no primeiro acesso).
 // Uso: npm run db:setup   (lê o arquivo .env.local)
-import { readFile } from "node:fs/promises";
 import { neon } from "@neondatabase/serverless";
+import { COMANDOS_SCHEMA } from "../src/backend/db/schema.mjs";
 
 if (!process.env.DATABASE_URL) {
   console.error("Defina DATABASE_URL no arquivo .env.local antes de rodar.");
@@ -9,14 +9,5 @@ if (!process.env.DATABASE_URL) {
 }
 
 const sql = neon(process.env.DATABASE_URL);
-const schema = await readFile(new URL("../src/backend/db/schema.sql", import.meta.url), "utf8");
-const comandos = schema
-  .split("\n")
-  .filter((l) => !l.trim().startsWith("--"))
-  .join("\n")
-  .split(";")
-  .map((c) => c.trim())
-  .filter(Boolean);
-
-for (const c of comandos) await sql.query(c);
-console.log(`Banco pronto (${comandos.length} comandos executados).`);
+for (const c of COMANDOS_SCHEMA) await sql.query(c);
+console.log(`Banco pronto (${COMANDOS_SCHEMA.length} comandos executados).`);

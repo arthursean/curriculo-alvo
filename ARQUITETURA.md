@@ -19,7 +19,7 @@ src/
 ├── backend/                  Roda só no servidor (todo arquivo tem `import "server-only"`)
 │   ├── servicos/             Regras de negócio, sem HTTP: autenticacao, conta, perfil, vagas
 │   ├── repositorios/         Acesso ao banco, só SQL: usuarios, sessoes, recuperacoes, perfis, curriculos, tentativas
-│   ├── db/                   Conexão (cliente.js) e estrutura (schema.sql)
+│   ├── db/                   Conexão (cliente.js, cria as tabelas no 1º acesso) e estrutura (schema.mjs)
 │   ├── auth/                 Hash de senha (scrypt), sessão em cookie, limite de tentativas
 │   ├── email/                Envio do e-mail de recuperação (Resend)
 │   ├── http/                 lerJson, rota(), erros (ErroApp) — a ponte entre HTTP e serviços
@@ -62,4 +62,4 @@ Os serviços lançam `ErroApp("mensagem", status)` para erros esperados (senha e
 - **Nova fonte de vagas:** crie `backend/vagas/fontes/minhafonte.js` exportando `nome` e `buscar(q, { local, dias })` no formato comum (veja `gupy.js`) e registre em `backend/servicos/vagas.js`.
 - **Nova skill ou sinônimo:** edite `shared/skills.js` com `S("Nome", [sinônimos], [pais])`.
 - **Nova rota:** controlador fino em `app/api/.../route.js` chamando um serviço, e função correspondente em `frontend/lib/api.js`.
-- **Nova tabela:** acrescente em `backend/db/schema.sql` (com `IF NOT EXISTS`), crie o repositório e rode `npm run db:setup`.
+- **Nova tabela:** acrescente o comando no fim de `backend/db/schema.mjs` (com `IF NOT EXISTS`) e crie o repositório. O site cria a tabela sozinho no próximo acesso (ou rode `npm run db:setup`).

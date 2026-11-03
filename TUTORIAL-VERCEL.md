@@ -254,14 +254,17 @@ O `APP_URL` é o endereço usado no link do e-mail de recuperação de senha.
 
 > Sempre que você criar ou mudar uma variável, faça um **Redeploy**: o site só "enxerga" as variáveis no momento em que é construído.
 
-### 6.5 Criar as tabelas no banco de produção
+### 6.5 Tabelas do banco de produção (automático)
 
-O banco da branch `main` ainda está vazio. Para criar as tabelas:
+Você não precisa fazer nada: na primeira vez que alguém usar o site, ele cria sozinho as tabelas que faltarem no banco da branch `main`. Ele só cria; nunca apaga dados.
 
-1. No Neon, abra o projeto → **SQL Editor**.
-2. Confira se a branch selecionada no topo é **main**.
-3. No VS Code, abra o arquivo `src/backend/db/schema.sql`, copie **todo** o conteúdo e cole no SQL Editor.
-4. Clique em **Run**. Deve aparecer uma mensagem de sucesso. Em **Tables** você verá `usuarios`, `sessoes`, `perfis` e as demais.
+Se preferir criar antes, por exemplo para conferir no painel do Neon, rode no seu computador com a connection string da branch **main**:
+
+```bash
+npx dotenv-cli -v DATABASE_URL="COLE-AQUI-A-URL-DA-MAIN" -- npm run db:setup
+```
+
+Depois, em **Tables** no Neon, você verá `usuarios`, `sessoes`, `perfis` e as demais.
 
 ### 6.6 Testar em produção
 
@@ -289,7 +292,7 @@ git push
 
 O Vercel percebe o push e publica a nova versão sozinho, em cerca de 1 minuto. Se der erro, o site continua na versão anterior: nada quebra para os usuários.
 
-Se alguma atualização mudar o `src/backend/db/schema.sql`, rode o arquivo de novo no SQL Editor do Neon. Ele só cria o que estiver faltando.
+Se alguma atualização acrescentar tabelas (em `src/backend/db/schema.mjs`), o site as cria sozinho no primeiro acesso depois do deploy.
 
 ---
 
@@ -336,7 +339,8 @@ Apagar o arquivo **não resolve**: a chave continua no histórico do Git. Faça 
 |---|---|---|
 | `npm` não é reconhecido | Node.js não instalado ou terminal aberto antes da instalação | Instale o Node e **abra um novo** terminal |
 | `npm run db:setup` diz "Defina DATABASE_URL" | `.env.local` não existe ou está vazio | Refaça a parte 3.1 |
-| "Erro interno" ao criar conta | Tabelas não criadas ou `DATABASE_URL` errada | Parte 6.5; confira a variável e faça Redeploy |
+| "Erro interno" ao criar conta | `DATABASE_URL` errada, ausente ou de outra branch | Confira a variável no Vercel e faça Redeploy; veja o erro em **Logs** |
+| `relation "..." does not exist` nos logs | Versão antiga do site, de antes da criação automática de tabelas | Faça `git push` da versão atual (ou rode a parte 6.5 manualmente) |
 | `git push` pede senha e falha | O GitHub não aceita a senha da conta no terminal | Use o login pelo navegador que o Windows abre, ou instale o GitHub Desktop |
 | `remote origin already exists` | O comando já foi rodado antes | `git remote set-url origin https://github.com/SEU-USUARIO/curriculo-alvo.git` |
 | E-mail de recuperação não chega | Remetente de teste só entrega para o seu e-mail; `APP_URL` ou chave erradas | Confira spam, o painel **Emails** do Resend e as variáveis; faça Redeploy |
