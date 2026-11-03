@@ -1,0 +1,31 @@
+import Link from "next/link";
+
+const PASSOS = [
+  ["Crie seu perfil", "Competências, experiências, formação, idiomas e certificações, salvos com segurança na sua conta."],
+  ["Busque vagas", "Digite palavras-chave e filtre por área, modalidade (remoto, híbrido, presencial), data e nível."],
+  ["Gere o currículo da vaga", "Para cada vaga escolhida, um currículo reorganizado pelo que ela pede, com compatibilidade e dicas, pronto para PDF."],
+];
+
+export default function Inicio() {
+  return (
+    <>
+      <section className="hero">
+        <h1>Um currículo sob medida para cada vaga que você quer.</h1>
+        <p>Monte seu perfil uma vez, encontre vagas-alvo e deixe o Currículo Alvo adaptar seu currículo ao que cada empresa procura. Sem IA paga: um algoritmo próprio faz o trabalho.</p>
+        <div className="row" style={{ marginTop: 20 }}>
+          <Link href="/cadastrar" className="btn">Criar conta grátis</Link>
+          <Link href="/entrar" className="btn sec">Já tenho conta</Link>
+        </div>
+      </section>
+      <section className="passos">
+        {PASSOS.map(([titulo, texto], i) => (
+          <div key={titulo} className="card passo">
+            <div className="n">{i + 1}</div>
+            <h3>{titulo}</h3>
+            <p className="muted" style={{ margin: 0 }}>{texto}</p>
+          </div>
+        ))}
+      </section>
+    </>
+  );
+}

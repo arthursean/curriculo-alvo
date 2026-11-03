@@ -1,0 +1,9 @@
+node_modules
+.next
+.vercel
+.claude
+*.log
+
+# Segredos: qualquer .env, exceto o exemplo sem valores
+.env*
+!.env.example
