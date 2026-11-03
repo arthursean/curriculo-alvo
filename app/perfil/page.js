@@ -2,6 +2,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import TagInput from "@/components/TagInput";
+import MesAno from "@/components/MesAno";
+import Autocompletar from "@/components/Autocompletar";
+import { IDIOMAS } from "@/lib/idiomas";
 import { carregarPerfil, salvarPerfil, novoId, perfilVazio, useProtegido } from "@/lib/cliente";
 
 const NIVEIS_IDIOMA = ["Básico", "Intermediário", "Avançado", "Fluente", "Nativo"];
@@ -100,8 +103,8 @@ export default function Perfil() {
               <Campo rotulo="Cargo"><input value={e.cargo} onChange={(ev) => setLista("experiencias", e.id, "cargo", ev.target.value)} /></Campo>
               <Campo rotulo="Empresa"><input value={e.empresa} onChange={(ev) => setLista("experiencias", e.id, "empresa", ev.target.value)} /></Campo>
               <Campo rotulo="Local"><input value={e.local} onChange={(ev) => setLista("experiencias", e.id, "local", ev.target.value)} /></Campo>
-              <Campo rotulo="Início"><input type="month" value={e.inicio} onChange={(ev) => setLista("experiencias", e.id, "inicio", ev.target.value)} /></Campo>
-              <Campo rotulo="Fim"><input type="month" value={e.fim} disabled={e.atual} onChange={(ev) => setLista("experiencias", e.id, "fim", ev.target.value)} /></Campo>
+              <Campo rotulo="Início"><MesAno valor={e.inicio} onChange={(v) => setLista("experiencias", e.id, "inicio", v)} /></Campo>
+              <Campo rotulo="Fim"><MesAno valor={e.atual ? "" : e.fim} disabled={e.atual} onChange={(v) => setLista("experiencias", e.id, "fim", v)} /></Campo>
               <div style={{ alignSelf: "end", paddingBottom: 8 }}>
                 <label className="check"><input type="checkbox" checked={e.atual} onChange={(ev) => setLista("experiencias", e.id, "atual", ev.target.checked)} /> Trabalho atual</label>
               </div>
@@ -134,8 +137,8 @@ export default function Perfil() {
                   {STATUS_FORMACAO.map((s) => <option key={s}>{s}</option>)}
                 </select>
               </Campo>
-              <Campo rotulo="Início"><input type="month" value={f.inicio} onChange={(ev) => setLista("formacao", f.id, "inicio", ev.target.value)} /></Campo>
-              <Campo rotulo="Conclusão (ou previsão)"><input type="month" value={f.fim} onChange={(ev) => setLista("formacao", f.id, "fim", ev.target.value)} /></Campo>
+              <Campo rotulo="Início"><MesAno valor={f.inicio} onChange={(v) => setLista("formacao", f.id, "inicio", v)} /></Campo>
+              <Campo rotulo="Conclusão (ou previsão)"><MesAno valor={f.fim} anosFuturos={8} onChange={(v) => setLista("formacao", f.id, "fim", v)} /></Campo>
               <div style={{ alignSelf: "end" }}><button className="btn ghost sm" onClick={() => remover("formacao", f.id)}>Remover</button></div>
             </div>
           </div>
@@ -149,7 +152,14 @@ export default function Perfil() {
         </div>
         {perfil.idiomas.map((i) => (
           <div key={i.id} className="row">
-            <input style={{ flex: 2, minWidth: 140, width: "auto" }} value={i.idioma} onChange={(ev) => setLista("idiomas", i.id, "idioma", ev.target.value)} placeholder="Inglês" />
+            <Autocompletar
+              style={{ flex: 2, minWidth: 160 }}
+              valor={i.idioma}
+              onChange={(v) => setLista("idiomas", i.id, "idioma", v)}
+              // Não sugere idiomas que já estão em outras linhas.
+              opcoes={IDIOMAS.filter((op) => op === i.idioma || !perfil.idiomas.some((x) => x.idioma === op))}
+              placeholder="Digite: ing, esp, fra…"
+            />
             <select style={{ flex: 1, minWidth: 140, width: "auto" }} value={i.nivel} onChange={(ev) => setLista("idiomas", i.id, "nivel", ev.target.value)}>
               {NIVEIS_IDIOMA.map((n) => <option key={n}>{n}</option>)}
             </select>

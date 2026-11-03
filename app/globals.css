@@ -116,6 +116,20 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 
 .auth { max-width: 440px; margin: 24px auto 0; }
 
+/* Mês e ano */
+.mes-ano { display: grid; grid-template-columns: 1fr 1.2fr; gap: 6px; }
+.mes-ano select:disabled { opacity: .5; }
+
+/* Autocompletar */
+.autocompletar { position: relative; }
+.sugestoes {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px);
+  margin: 0; padding: 4px; list-style: none; max-height: 220px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15);
+}
+.sugestoes li { padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+.sugestoes li.ativa { background: var(--primary-soft); color: var(--primary); }
+
 /* Busca de vagas */
 .busca-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 860px) { .busca-layout { grid-template-columns: 1fr; } }

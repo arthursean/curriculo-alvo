@@ -1,7 +1,7 @@
 function periodo(inicio, fim, atual) {
   const fmt = (m) => {
-    if (!m) return "";
-    const [a, mes] = m.split("-");
+    const [a, mes] = (m || "").split("-");
+    if (!a) return "";
     return mes ? `${mes}/${a}` : a;
   };
   const i = fmt(inicio);
