@@ -22,7 +22,10 @@ export async function buscar(q, { local, dias } = {}) {
     url: j.redirect_url,
     publicadaEm: j.created,
     categoria: j.category?.label,
-    salario: j.salary_min ? `${real(j.salary_min)}${j.salary_max && j.salary_max !== j.salary_min ? ` – ${real(j.salary_max)}` : ""}` : null,
+    // A Adzuna informa salário anual: convertemos para mensal (÷ 12) para o filtro e a exibição.
+    salario: j.salary_min ? `${real(j.salary_min / 12)}${j.salary_max && j.salary_max !== j.salary_min ? ` – ${real(j.salary_max / 12)}` : ""} /mês` : null,
+    salarioMin: j.salary_min ? Math.round(j.salary_min / 12) : undefined,
+    salarioMax: j.salary_min ? Math.round((j.salary_max || j.salary_min) / 12) : undefined,
     tags: [],
     fonte: nome,
   }));

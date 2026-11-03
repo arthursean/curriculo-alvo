@@ -41,8 +41,20 @@ function regexTermo(termo) {
   return cacheRe.get(termo);
 }
 
+// O mesmo texto (descrição da vaga, perfil) é testado contra centenas de termos: normaliza uma vez só.
+const cacheNorm = new Map();
+function normalizado(texto) {
+  let n = cacheNorm.get(texto);
+  if (n === undefined) {
+    if (cacheNorm.size > 3000) cacheNorm.clear();
+    n = normalizar(texto);
+    cacheNorm.set(texto, n);
+  }
+  return n;
+}
+
 function aparicoes(texto, termo) {
-  return (normalizar(texto).match(regexTermo(termo)) || []).length;
+  return (normalizado(String(texto ?? "")).match(regexTermo(termo)) || []).length;
 }
 const temAlguma = (texto, formas) => formas.some((f) => aparicoes(texto, f));
 
@@ -160,10 +172,21 @@ const listar = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs.at
 // "Frontend" -> "frontend", mas "JavaScript", "SQL" e "DevOps" ficam como estão.
 const minuscula = (t) => (/^[A-ZÀ-Ú][a-zà-ú]+(?:\s[a-zà-ú]+)*$/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t);
 
+// A análise do perfil não depende da vaga: calculada uma vez por objeto de perfil
+// (avaliar 200 vagas de uma busca reaproveita o mesmo resultado).
+const cachePerfil = new WeakMap();
+function analisarPerfil(perfil) {
+  let a = cachePerfil.get(perfil);
+  if (!a) {
+    const universo = universoDeSkills(perfil);
+    a = { universo, porNome: new Map(universo.map((s) => [s.nome, s])), doPerfil: skillsDoPerfil(perfil, universo) };
+    cachePerfil.set(perfil, a);
+  }
+  return a;
+}
+
 export function personalizar(perfil, vaga) {
-  const universo = universoDeSkills(perfil);
-  const porNome = new Map(universo.map((s) => [s.nome, s]));
-  const doPerfil = skillsDoPerfil(perfil, universo);
+  const { universo, porNome, doPerfil } = analisarPerfil(perfil);
   const { tem } = doPerfil;
   const exibir = (nome) => tem.get(nome)?.exibir || nome;
 

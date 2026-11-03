@@ -68,10 +68,40 @@ export function classificarArea(...textos) {
   return melhor || "outros";
 }
 
+// Salário escrito no texto da vaga ("Salário: R$ 3.500,00", "Remuneração de R$ 4.000 a R$ 5.000").
+// Só vale logo depois de uma palavra de salário, para não pegar valor de vale-refeição etc.
+const MARCA_SALARIO = /(sal[aá]rio|remunera[cç][aã]o|faixa salarial|bolsa)/gi;
+const VALOR = /R\$\s?(\d{1,3}(?:\.\d{3})+|\d{3,6})(?:,\d{2})?(?:\s*(?:a|até|-|–)\s*(?:R\$\s?)?(\d{1,3}(?:\.\d{3})+|\d{3,6})(?:,\d{2})?)?/i;
+const numero = (s) => Number(s.replace(/\./g, ""));
+
+export function salarioDoTexto(texto = "") {
+  for (const m of texto.matchAll(MARCA_SALARIO)) {
+    // O valor precisa estar na mesma frase ("Salário a combinar. VR de R$ 900" não conta).
+    const frase = texto.slice(m.index, m.index + 90).split(/[;\n]|\.(?!\d)/)[0];
+    const v = frase.match(VALOR);
+    if (!v) continue;
+    const min = numero(v[1]);
+    const max = v[2] ? numero(v[2]) : min;
+    if (min < 500 || max > 100000 || max < min) continue;
+    return { salarioMin: min, salarioMax: max };
+  }
+  return {};
+}
+
+const reais = (n) => `R$ ${n.toLocaleString("pt-BR")}`;
+
 export function montarVaga(v) {
   const descricao = semHtml(v.descricao);
+  // Faixa salarial em R$/mês: da fonte, ou lida no texto (não se aplica a vagas internacionais, em outra moeda).
+  const faixa = v.salarioMin != null ? { salarioMin: v.salarioMin, salarioMax: v.salarioMax ?? v.salarioMin }
+    : v.internacional ? {} : salarioDoTexto(descricao);
+  const salario = v.salario || (faixa.salarioMin != null
+    ? (faixa.salarioMin === faixa.salarioMax ? reais(faixa.salarioMin) : `${reais(faixa.salarioMin)} – ${reais(faixa.salarioMax)}`)
+    : null);
   return {
     ...v,
+    ...faixa,
+    salario,
     descricao,
     // Quando a fonte informa modalidade/nível, vale o dado da fonte; senão deduzimos do texto.
     nivel: v.nivel || classificarNivel(v.titulo, descricao),

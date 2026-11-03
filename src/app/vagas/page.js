@@ -1,10 +1,13 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AREAS, MODALIDADES, NIVEIS } from "@/shared/vagas";
 import { tempoRelativo } from "@/shared/texto";
 import { IDIOMAS_CV } from "@/shared/traducao";
-import { buscarVagas, carregarCurriculos } from "@/frontend/lib/api";
+import { personalizar } from "@/shared/personalizar";
+import { perfilCompleto } from "@/shared/perfil";
+import { buscarVagas, carregarCurriculos, carregarFavoritos, carregarPerfil, desfavoritar, favoritar } from "@/frontend/lib/api";
 import { guardarVagaAtual } from "@/frontend/lib/navegacao";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 
@@ -25,6 +28,69 @@ function alternar(lista, valor) {
   return lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor];
 }
 
+const faixa = (p) => (p >= 70 ? "alta" : p >= 40 ? "media" : "baixa");
+
+async function carregar() {
+  const [perfil, curriculos, favoritos] = await Promise.all([carregarPerfil(), carregarCurriculos(), carregarFavoritos()]);
+  return { perfil, curriculos, favoritos };
+}
+
+// Avalia as vagas aos poucos (lotes pequenos) para a tela não travar com 200 vagas.
+// Nada vai para o servidor: a compatibilidade é calculada no navegador e não é salva.
+function useAvaliacoes(lista, perfil) {
+  const [avaliacoes, setAvaliacoes] = useState(() => new Map());
+  useEffect(() => {
+    if (!perfil || !perfilCompleto(perfil) || !lista.length) return;
+    let cancelado = false;
+    const pendentes = lista.filter((v) => !avaliacoes.has(v.id));
+    let i = 0;
+    function lote() {
+      if (cancelado) return;
+      const novos = new Map();
+      for (const v of pendentes.slice(i, i + 12)) novos.set(v.id, personalizar(perfil, v));
+      i += 12;
+      if (novos.size) setAvaliacoes((m) => new Map([...m, ...novos]));
+      if (i < pendentes.length) setTimeout(lote, 0);
+    }
+    lote();
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lista, perfil]);
+  return avaliacoes;
+}
+
+function Detalhes({ avaliacao }) {
+  if (!avaliacao) return <p className="muted small">Calculando compatibilidade…</p>;
+  const grupo = (titulo, itens, classe) =>
+    itens?.length > 0 && (
+      <div>
+        <strong className="small">{titulo}</strong>
+        <div className="tags" style={{ marginTop: 6 }}>{itens.map((t) => <span key={t} className={`tag ${classe}`}>{t}</span>)}</div>
+      </div>
+    );
+  return (
+    <div className="stack">
+      <div>
+        <div className="row between small"><strong>Compatibilidade estimada</strong><span>{avaliacao.compatibilidade}%</span></div>
+        <div className="barra" style={{ marginTop: 6 }}><div style={{ width: `${avaliacao.compatibilidade}%` }} /></div>
+      </div>
+      <div className="grid-2">
+        {grupo("Você atende", avaliacao.atendidos, "ok")}
+        {grupo("Você tem algo parecido", avaliacao.relacionados, "pri")}
+        {grupo("A vaga pede, mas não aparece no seu perfil", avaliacao.lacunas, "warn")}
+      </div>
+      {avaliacao.dicas?.length > 0 && (
+        <div>
+          <strong className="small">Dicas</strong>
+          <ul className="small" style={{ margin: "4px 0 0", paddingLeft: 18 }}>{avaliacao.dicas.slice(0, 3).map((d) => <li key={d}>{d}</li>)}</ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Vagas() {
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -33,12 +99,24 @@ export default function Vagas() {
   const [modalidades, setModalidades] = useState([]);
   const [niveis, setNiveis] = useState([]);
   const [areas, setAreas] = useState([]);
+  const [salMin, setSalMin] = useState("");
+  const [salMax, setSalMax] = useState("");
+  const [semSalario, setSemSalario] = useState(true);
   const [vagas, setVagas] = useState(null);
   const [fontes, setFontes] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
-  const { dados: curriculos } = useProtegido(carregarCurriculos);
-  const geradas = useMemo(() => new Set((curriculos || []).map((c) => c.vaga.id)), [curriculos]);
+  const [aba, setAba] = useState("busca"); // "busca" | "favoritas"
+  const [ordem, setOrdem] = useState("compatibilidade");
+  const [aberta, setAberta] = useState(null);
+  const [favoritas, setFavoritas] = useState(null); // Map id -> vaga
+  const { dados } = useProtegido(carregar);
+  const perfil = dados?.perfil;
+  const geradas = useMemo(() => new Set((dados?.curriculos || []).map((c) => c.vaga.id)), [dados]);
+
+  useEffect(() => {
+    if (dados) setFavoritas(new Map(dados.favoritos.map((f) => [f.vaga.id, f.vaga])));
+  }, [dados]);
 
   useEffect(() => {
     try {
@@ -55,6 +133,8 @@ export default function Vagas() {
     if (!q.trim()) return;
     setCarregando(true);
     setErro("");
+    setAba("busca");
+    setAberta(null);
     try {
       // Os filtros de modalidade/nível/área são aplicados na tela, para trocar sem nova busca.
       const data = await buscarVagas({ q, local, dias: String(dias) });
@@ -70,18 +150,62 @@ export default function Vagas() {
     }
   }
 
-  const filtradas = useMemo(
-    () =>
-      (vagas || []).filter(
-        (v) =>
-          (!modalidades.length || modalidades.includes(v.modalidade)) &&
-          (!niveis.length || niveis.includes(v.nivel)) &&
-          (!areas.length || areas.includes(v.area))
-      ),
-    [vagas, modalidades, niveis, areas]
-  );
+  async function alternarFavorita(vaga) {
+    const era = favoritas.has(vaga.id);
+    // Atualiza a tela na hora e desfaz se o servidor recusar.
+    setFavoritas((m) => {
+      const n = new Map(m);
+      era ? n.delete(vaga.id) : n.set(vaga.id, vaga);
+      return n;
+    });
+    try {
+      await (era ? desfavoritar(vaga.id) : favoritar(vaga));
+    } catch (e) {
+      setErro(e.message);
+      setFavoritas((m) => {
+        const n = new Map(m);
+        era ? n.set(vaga.id, vaga) : n.delete(vaga.id);
+        return n;
+      });
+    }
+  }
 
-  const contagem = (campo, id) => (vagas || []).filter((v) => v[campo] === id).length;
+  const base = useMemo(
+    () => (aba === "favoritas" ? [...(favoritas?.values() || [])] : vagas || []),
+    [aba, favoritas, vagas]
+  );
+  const avaliacoes = useAvaliacoes(base, perfil);
+
+  // Uma vaga passa nos filtros? `ignorar` deixa de fora um grupo: é assim que cada grupo conta as vagas
+  // considerando o que está marcado nos OUTROS grupos (ex.: "Remoto (12)" já respeita o nível escolhido).
+  const filtroSalario = useMemo(() => {
+    const min = Number(salMin) || 0;
+    const max = Number(salMax) || Infinity;
+    return (v) => {
+      if (v.salarioMin == null) return semSalario;
+      return v.salarioMax >= min && v.salarioMin <= max; // faixas que se sobrepõem
+    };
+  }, [salMin, salMax, semSalario]);
+
+  const passa = (v, ignorar) =>
+    (ignorar === "modalidade" || !modalidades.length || modalidades.includes(v.modalidade)) &&
+    (ignorar === "nivel" || !niveis.length || niveis.includes(v.nivel)) &&
+    (ignorar === "area" || !areas.length || areas.includes(v.area)) &&
+    (ignorar === "salario" || filtroSalario(v));
+
+  const filtradas = useMemo(() => {
+    const lista = base.filter((v) => passa(v));
+    if (ordem === "compatibilidade") {
+      lista.sort((a, b) => (avaliacoes.get(b.id)?.compatibilidade ?? -1) - (avaliacoes.get(a.id)?.compatibilidade ?? -1));
+    }
+    return lista;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base, modalidades, niveis, areas, filtroSalario, ordem, avaliacoes]);
+
+  const contagem = (campo, id) => base.filter((v) => passa(v, campo) && v[campo] === id).length;
+  const comSalario = base.filter((v) => passa(v, "salario") && v.salarioMin != null).length;
+  const algumFiltro = modalidades.length || niveis.length || areas.length || salMin || salMax || !semSalario;
+  const perfilOk = perfil && perfilCompleto(perfil);
 
   function gerar(vaga) {
     guardarVagaAtual(vaga);
@@ -92,7 +216,7 @@ export default function Vagas() {
     <div className="stack">
       <div>
         <h1>Buscar vagas</h1>
-        <p className="muted" style={{ margin: 0 }}>Digite cargos, ferramentas ou palavras-chave. Depois escolha uma vaga para gerar o currículo personalizado.</p>
+        <p className="muted" style={{ margin: 0 }}>Veja a compatibilidade de cada vaga com o seu perfil, clique para ver os detalhes e gere o currículo só das que interessarem.</p>
       </div>
 
       <form className="card row" onSubmit={buscar}>
@@ -116,6 +240,9 @@ export default function Vagas() {
       </form>
 
       {erro && <div className="alerta">{erro}</div>}
+      {dados && !perfilOk && (
+        <div className="alerta info">Preencha <Link href="/perfil">seu perfil</Link> (nome e competências ou experiências) para ver a compatibilidade de cada vaga.</div>
+      )}
 
       <div className="busca-layout">
         <aside className="card filtros">
@@ -124,7 +251,7 @@ export default function Vagas() {
             {MODALIDADES.map((m) => (
               <label key={m.id} className="check">
                 <input type="checkbox" checked={modalidades.includes(m.id)} onChange={() => setModalidades(alternar(modalidades, m.id))} />
-                {m.nome} {vagas && <span className="muted small">({contagem("modalidade", m.id)})</span>}
+                {m.nome} <span className="muted small">({contagem("modalidade", m.id)})</span>
               </label>
             ))}
           </fieldset>
@@ -133,7 +260,7 @@ export default function Vagas() {
             {[...NIVEIS.map((n) => n.id), "nao_informado"].map((id) => (
               <label key={id} className="check">
                 <input type="checkbox" checked={niveis.includes(id)} onChange={() => setNiveis(alternar(niveis, id))} />
-                {NIVEL_NOME[id]} {vagas && <span className="muted small">({contagem("nivel", id)})</span>}
+                {NIVEL_NOME[id]} <span className="muted small">({contagem("nivel", id)})</span>
               </label>
             ))}
           </fieldset>
@@ -142,56 +269,110 @@ export default function Vagas() {
             {[...AREAS.map((a) => a.id), "outros"].map((id) => (
               <label key={id} className="check">
                 <input type="checkbox" checked={areas.includes(id)} onChange={() => setAreas(alternar(areas, id))} />
-                {AREA_NOME[id]} {vagas && <span className="muted small">({contagem("area", id)})</span>}
+                {AREA_NOME[id]} <span className="muted small">({contagem("area", id)})</span>
               </label>
             ))}
           </fieldset>
-          {(modalidades.length || niveis.length || areas.length) > 0 && (
-            <button className="btn sec sm" onClick={() => { setModalidades([]); setNiveis([]); setAreas([]); }}>Limpar filtros</button>
-          )}
+          <fieldset>
+            <legend>Faixa salarial (R$/mês)</legend>
+            <div className="grid-2" style={{ gap: 6 }}>
+              <input type="number" inputMode="numeric" min="0" step="500" placeholder="Mínimo" aria-label="Salário mínimo" value={salMin} onChange={(e) => setSalMin(e.target.value)} />
+              <input type="number" inputMode="numeric" min="0" step="500" placeholder="Máximo" aria-label="Salário máximo" value={salMax} onChange={(e) => setSalMax(e.target.value)} />
+            </div>
+            <label className="check" style={{ marginTop: 8 }}>
+              <input type="checkbox" checked={semSalario} onChange={(e) => setSemSalario(e.target.checked)} />
+              Incluir vagas sem salário informado
+            </label>
+            <p className="muted small" style={{ margin: "4px 0 0" }}>{comSalario} vaga(s) informam salário.</p>
+          </fieldset>
+          {algumFiltro ? (
+            <button className="btn sec sm" onClick={() => { setModalidades([]); setNiveis([]); setAreas([]); setSalMin(""); setSalMax(""); setSemSalario(true); }}>Limpar filtros</button>
+          ) : null}
         </aside>
 
         <section>
-          {vagas === null && !carregando && <div className="card vazio">Faça uma busca para ver as vagas.</div>}
-          {carregando && <div className="card vazio">Buscando vagas em várias fontes…</div>}
-          {vagas && !carregando && (
-            <>
-              <div className="row between" style={{ marginBottom: 12 }}>
-                <strong>{filtradas.length} vaga(s)</strong>
-                <div className="tags">
-                  {fontes.map((f) => (
-                    <span key={f.nome} className={`tag ${f.ok ? "ok" : "warn"}`} title={f.detalhe || ""}>
-                      {f.nome}: {f.ok ? f.total : f.detalhe}
-                    </span>
-                  ))}
-                </div>
+          <div className="row between" style={{ marginBottom: 12 }}>
+            <div className="abas" role="tablist">
+              <button role="tab" aria-selected={aba === "busca"} className={aba === "busca" ? "ativa" : ""} onClick={() => { setAba("busca"); setAberta(null); }}>
+                Resultados{vagas ? ` (${vagas.length})` : ""}
+              </button>
+              <button role="tab" aria-selected={aba === "favoritas"} className={aba === "favoritas" ? "ativa" : ""} onClick={() => { setAba("favoritas"); setAberta(null); }}>
+                ★ Favoritas{favoritas ? ` (${favoritas.size})` : ""}
+              </button>
+            </div>
+            <label className="row small" style={{ gap: 6 }}>
+              Ordenar por
+              <select value={ordem} onChange={(e) => setOrdem(e.target.value)} style={{ width: "auto" }}>
+                <option value="compatibilidade">Maior compatibilidade</option>
+                <option value="recentes">Mais recentes</option>
+              </select>
+            </label>
+          </div>
+
+          {aba === "busca" && vagas === null && !carregando && <div className="card vazio">Faça uma busca para ver as vagas.</div>}
+          {aba === "busca" && carregando && <div className="card vazio">Buscando vagas em várias fontes…</div>}
+          {aba === "favoritas" && favoritas?.size === 0 && <div className="card vazio">Nenhuma vaga favorita. Clique na ☆ de uma vaga para guardá-la aqui.</div>}
+
+          {aba === "busca" && vagas && !carregando && (
+            <div className="row between small" style={{ marginBottom: 12 }}>
+              <strong>{filtradas.length} vaga(s)</strong>
+              <div className="tags">
+                {fontes.map((f) => (
+                  <span key={f.nome} className={`tag ${f.ok ? "ok" : "warn"}`} title={f.detalhe || ""}>
+                    {f.nome}: {f.ok ? f.total : f.detalhe}
+                  </span>
+                ))}
               </div>
-              {filtradas.length === 0 && <div className="card vazio">Nenhuma vaga com esses filtros. Tente outras palavras ou remova filtros.</div>}
-              {filtradas.map((v) => (
-                <article key={v.id} className="item vaga">
-                  <div className="row between" style={{ alignItems: "start" }}>
-                    <div style={{ flex: 1, minWidth: 220 }}>
-                      <h3>{v.titulo}</h3>
-                      <div className="muted small">{v.empresa} · {v.local} · {tempoRelativo(v.publicadaEm)} · via {v.fonte}</div>
-                    </div>
-                    {geradas.has(v.id) && <span className="tag ok">Currículo gerado</span>}
-                  </div>
-                  <div className="tags" style={{ marginTop: 8 }}>
-                    <span className="tag pri">{MOD_NOME[v.modalidade]}</span>
-                    <span className="tag">{NIVEL_NOME[v.nivel]}</span>
-                    <span className="tag">{AREA_NOME[v.area]}</span>
-                    {v.idioma && v.idioma !== "pt" && <span className="tag warn">Vaga em {IDIOMA_NOME[v.idioma]?.toLowerCase()}</span>}
-                    {v.salario && <span className="tag ok">{v.salario}</span>}
-                  </div>
-                  <p className="desc">{v.descricao}</p>
-                  <div className="row">
-                    <button className="btn sm" onClick={() => gerar(v)}>{geradas.has(v.id) ? "Ver currículo" : "Gerar currículo para esta vaga"}</button>
-                    <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer">Ver vaga original ↗</a>
-                  </div>
-                </article>
-              ))}
-            </>
+            </div>
           )}
+
+          {!(aba === "busca" && carregando) && filtradas.map((v) => {
+            const av = avaliacoes.get(v.id);
+            const estaAberta = aberta === v.id;
+            const fav = favoritas?.has(v.id);
+            return (
+              <article key={v.id} className={`item vaga ${estaAberta ? "aberta" : ""}`}>
+                <div className="row" style={{ alignItems: "start", flexWrap: "nowrap" }}>
+                  {perfilOk && (
+                    <div className={`compat ${av ? faixa(av.compatibilidade) : ""}`} title="Compatibilidade com o seu perfil">
+                      {av ? `${av.compatibilidade}%` : "…"}
+                    </div>
+                  )}
+                  <button className="vaga-cabecalho" aria-expanded={estaAberta} onClick={() => setAberta(estaAberta ? null : v.id)}>
+                    <h3>{v.titulo}</h3>
+                    <div className="muted small">{v.empresa} · {v.local} · {tempoRelativo(v.publicadaEm)} · via {v.fonte}</div>
+                  </button>
+                  <button className={`estrela ${fav ? "ativa" : ""}`} onClick={() => alternarFavorita(v)} aria-pressed={!!fav} title={fav ? "Remover das favoritas" : "Favoritar vaga"}>
+                    {fav ? "★" : "☆"}
+                  </button>
+                </div>
+                <div className="tags" style={{ marginTop: 8 }}>
+                  <span className="tag pri">{MOD_NOME[v.modalidade]}</span>
+                  <span className="tag">{NIVEL_NOME[v.nivel]}</span>
+                  <span className="tag">{AREA_NOME[v.area]}</span>
+                  {v.idioma && v.idioma !== "pt" && <span className="tag warn">Vaga em {IDIOMA_NOME[v.idioma]?.toLowerCase()}</span>}
+                  {v.salario && <span className="tag ok">{v.salario}</span>}
+                  {geradas.has(v.id) && <span className="tag ok">Currículo gerado</span>}
+                </div>
+
+                {estaAberta ? (
+                  <div className="stack vaga-detalhe">
+                    {perfilOk && <Detalhes avaliacao={av} />}
+                    <div>
+                      <strong className="small">Descrição da vaga</strong>
+                      <div className="descricao-completa small">{v.descricao}</div>
+                    </div>
+                    <div className="row">
+                      <button className="btn sm" onClick={() => gerar(v)} disabled={!perfilOk}>{geradas.has(v.id) ? "Ver currículo" : "Gerar currículo para esta vaga"}</button>
+                      <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer">Ver vaga original ↗</a>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="desc">{v.descricao}</p>
+                )}
+              </article>
+            );
+          })}
         </section>
       </div>
     </div>

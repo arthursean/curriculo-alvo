@@ -16,8 +16,15 @@ function nivel(senioridades = []) {
 
 function salario(s) {
   if (!s?.showRangeToApplicant || !(s.finalRange > 0)) return null;
-  const fmt = (v) => `R$ ${v.toLocaleString("pt-BR")}`;
-  return s.initialRange > 0 ? `${fmt(s.initialRange)} – ${fmt(s.finalRange)}` : `até ${fmt(s.finalRange)}`;
+  const fmt = (v) => `R$ ${Math.round(v).toLocaleString("pt-BR")}`;
+  if (!(s.initialRange > 0)) return `até ${fmt(s.finalRange)}`;
+  return s.initialRange === s.finalRange ? fmt(s.finalRange) : `${fmt(s.initialRange)} – ${fmt(s.finalRange)}`;
+}
+
+// Valores numéricos (R$/mês) para o filtro de faixa salarial. "até R$ 2.500" vira 2.500–2.500.
+function faixa(s) {
+  if (!s?.showRangeToApplicant || !(s.finalRange > 0)) return {};
+  return { salarioMin: s.initialRange > 0 ? s.initialRange : s.finalRange, salarioMax: s.finalRange };
 }
 
 export const nome = "Sólides";
@@ -37,6 +44,7 @@ export async function buscar(q) {
     publicadaEm: j.createdAt,
     categoria: "",
     salario: salario(j.salary),
+    ...faixa(j.salary),
     tags: (j.hardSkills || []).map((h) => h.name).filter(Boolean),
     modalidade: MODALIDADE[j.jobType] || (j.homeOffice ? "remoto" : undefined),
     nivel: nivel(j.seniority),

@@ -14,6 +14,13 @@ import { perfilCompleto } from "@/shared/perfil";
 
 const NOME_IDIOMA = Object.fromEntries(IDIOMAS_CV.map((i) => [i.id, i.nome]));
 
+// JSON com as chaves em ordem: o banco (JSONB) devolve os objetos com as chaves reordenadas,
+// então uma comparação com JSON.stringify comum acharia diferença onde não há.
+function estavel(valor) {
+  return JSON.stringify(valor ?? null, (_, v) =>
+    v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]])) : v);
+}
+
 async function carregar() {
   const [perfil, curriculos] = await Promise.all([carregarPerfil(), carregarCurriculos()]);
   return { perfil, curriculos };
@@ -54,15 +61,20 @@ function Personalizar() {
     const novo = personalizar(dados.perfil, v);
     setAjuste(novo);
     const tr = existente?.ajuste?.traducao;
-    const perfilMudou = JSON.stringify(existente?.ajuste?.resumo) !== JSON.stringify(novo.resumo) ||
-      JSON.stringify(existente?.ajuste?.experiencias) !== JSON.stringify(novo.experiencias);
+    const perfilMudou = estavel(existente?.ajuste?.resumo) !== estavel(novo.resumo) ||
+      estavel(existente?.ajuste?.experiencias) !== estavel(novo.experiencias) ||
+      estavel(existente?.ajuste?.formacao) !== estavel(novo.formacao) ||
+      estavel(existente?.ajuste?.projetos) !== estavel(novo.projetos);
     // A tradução salva só vale se o perfil não mudou desde então.
     const trValida = tr && !perfilMudou ? tr : null;
     setTraducao(trValida);
     // A edição manual é do usuário: é mantida mesmo que o perfil mude (ele pode descartar).
     const ed = existente?.ajuste?.edicao || null;
     setEdicao(ed);
-    salvar(v, novo, trValida, ed);
+    // Só grava no banco quando é um currículo novo ou quando o perfil mudou desde a última vez:
+    // abrir de novo um currículo já salvo não gera escrita.
+    if (!existente || perfilMudou || existente.ajuste?.compatibilidade !== novo.compatibilidade) salvar(v, novo, trValida, ed);
+    else setSalvo(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dados, vagaId]);
 

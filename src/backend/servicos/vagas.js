@@ -30,6 +30,8 @@ export async function buscarVagas({ q, local, dias, modalidades = [], niveis = [
   });
 
   vagas = vagas.map(montarVaga);
+  // Público brasileiro: vaga de fora do país só aparece se for remota.
+  vagas = vagas.filter((v) => !v.internacional || v.modalidade === "remoto");
   if (local) vagas = vagas.filter((v) => v.fonte === adzuna.nome || v.modalidade === "remoto" || contem(v.local, local));
   if (dias) vagas = vagas.filter((v) => diasDesde(v.publicadaEm) <= dias);
   if (modalidades.length) vagas = vagas.filter((v) => modalidades.includes(v.modalidade));

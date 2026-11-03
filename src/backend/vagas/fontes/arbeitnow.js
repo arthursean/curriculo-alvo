@@ -2,8 +2,8 @@ import "server-only";
 import { contem } from "@/shared/texto";
 import { buscarJson } from "../http";
 
-// Arbeitnow: vagas internacionais (remotas e presenciais), sem chave. A API não tem busca:
-// trazemos a lista recente e filtramos pelas palavras-chave aqui.
+// Arbeitnow: vagas internacionais (Europa), sem chave. A API não tem busca: trazemos a lista
+// recente e filtramos pelas palavras-chave aqui. Público brasileiro: só as remotas.
 export const nome = "Arbeitnow";
 
 function bateComBusca(v, q) {
@@ -15,6 +15,7 @@ function bateComBusca(v, q) {
 export async function buscar(q) {
   const data = await buscarJson("https://www.arbeitnow.com/api/job-board-api");
   return (data.data || [])
+    .filter((j) => j.remote)
     .map((j) => ({
       id: `arbeitnow-${j.slug}`,
       titulo: j.title,
@@ -26,7 +27,9 @@ export async function buscar(q) {
       categoria: (j.tags || []).join(", "),
       salario: null,
       tags: [...(j.tags || []), ...(j.job_types || [])],
-      remoto: j.remote,
+      remoto: true,
+      modalidade: "remoto",
+      internacional: true,
       fonte: nome,
     }))
     .filter((v) => bateComBusca(v, q));

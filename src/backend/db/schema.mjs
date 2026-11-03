@@ -51,4 +51,13 @@ export const COMANDOS_SCHEMA = [
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (usuario_id, vaga_id)
   )`,
+
+  // Vagas favoritadas: guardamos a vaga inteira para mostrar mesmo sem refazer a busca.
+  `CREATE TABLE IF NOT EXISTS favoritos (
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    vaga_id TEXT NOT NULL,
+    vaga JSONB NOT NULL,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (usuario_id, vaga_id)
+  )`,
 ];

@@ -41,3 +41,6 @@ export const removerCurriculo = (vagaId) => api(`/api/curriculos?vaga=${encodeUR
 
 // ---- Vagas --------------------------------------------------------------------------
 export const buscarVagas = (params) => api(`/api/vagas?${new URLSearchParams(params)}`);
+export const carregarFavoritos = async () => (await api("/api/favoritos")).favoritos;
+export const favoritar = (vaga) => api("/api/favoritos", { metodo: "POST", corpo: { vaga } });
+export const desfavoritar = (vagaId) => api(`/api/favoritos?vaga=${encodeURIComponent(vagaId)}`, { metodo: "DELETE" });

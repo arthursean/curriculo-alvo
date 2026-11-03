@@ -146,6 +146,27 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .vaga h3 { margin-bottom: 2px; }
 .vaga .desc { color: var(--muted); font-size: .9rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0 10px; }
 
+/* Compatibilidade, detalhes e favoritos */
+.compat {
+  flex: none; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 800; font-size: .9rem; background: var(--surface-2); color: var(--muted); border: 3px solid var(--border);
+}
+.compat.alta { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+.compat.media { color: var(--primary); border-color: var(--primary); background: var(--primary-soft); }
+.compat.baixa { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+.vaga-cabecalho { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font: inherit; width: auto; }
+.vaga-cabecalho h3 { color: var(--text); }
+.vaga-cabecalho:hover h3 { color: var(--primary); text-decoration: underline; }
+.vaga.aberta { border-color: var(--primary); }
+.vaga-detalhe { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+.descricao-completa { white-space: pre-line; max-height: 260px; overflow-y: auto; color: var(--muted); margin-top: 6px; padding-right: 6px; }
+.estrela { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 1.3rem; line-height: 1; cursor: pointer; }
+.estrela:hover { border-color: var(--warn); color: var(--warn); }
+.estrela.ativa { color: #e0a100; border-color: #e0a100; background: var(--warn-soft); }
+.abas { display: inline-flex; background: var(--surface-2); border-radius: 10px; padding: 4px; gap: 4px; }
+.abas button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; cursor: pointer; font: inherit; font-weight: 600; color: var(--muted); width: auto; }
+.abas button.ativa { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
 /* Início */
 .hero { padding: 40px 0 16px; }
 .hero h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); max-width: 720px; }
