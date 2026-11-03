@@ -12,14 +12,33 @@ Site para criar seu perfil profissional, gerar um currículo base, buscar vagas-
 
 ## Rodar localmente
 
-```bash
-npm install
-cp .env.example .env.local   # preencha DATABASE_URL
-npm run db:setup
-npm run dev
-```
+1. Instale as dependências:
 
-A organização do código (front, back e shared) está em [ARQUITETURA.md](ARQUITETURA.md). O passo a passo completo, incluindo publicação no GitHub e no Vercel, está em [TUTORIAL-VERCEL.md](TUTORIAL-VERCEL.md).
+   ```bash
+   npm install
+   ```
+
+2. Crie um arquivo `.env.local` na raiz com as variáveis abaixo. Ele fica fora do Git: nunca suba esse arquivo.
+
+   | Variável | Obrigatória | Para que serve |
+   |---|---|---|
+   | `DATABASE_URL` | sim | Connection string do Postgres (ex.: Neon), no formato `postgresql://usuario:senha@host/banco?sslmode=require` |
+   | `APP_URL` | em produção | Endereço público do site, usado no link de recuperação de senha (ex.: `https://seu-site.vercel.app`) |
+   | `RESEND_API_KEY` | em produção | Chave do [Resend](https://resend.com) para enviar o e-mail de recuperação. Sem ela, em desenvolvimento o link aparece no terminal |
+   | `EMAIL_FROM` | não | Remetente do e-mail (padrão: `Currículo Alvo <onboarding@resend.dev>`) |
+   | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | não | Busca de vagas do Brasil pela Adzuna |
+
+3. Rode o site:
+
+   ```bash
+   npm run dev
+   ```
+
+As tabelas do banco são criadas automaticamente no primeiro acesso. Se quiser criá-las antes, rode `npm run db:setup`.
+
+Para publicar no Vercel, importe o repositório e cadastre as mesmas variáveis em **Settings → Environment Variables**.
+
+A organização do código (front, back e shared) está em [ARQUITETURA.md](ARQUITETURA.md).
 
 ## Como funciona a personalização
 
@@ -56,4 +75,4 @@ InHire não tem busca geral de vagas: cada empresa tem a sua página própria (`
 
 ## Stack
 
-Next.js 16, Postgres (Neon), envio de e-mail pelo Resend. Nenhuma chave fica no código: tudo vem de variáveis de ambiente (veja `.env.example`).
+Next.js 16, Postgres (Neon), envio de e-mail pelo Resend. Nenhuma chave fica no código: tudo vem de variáveis de ambiente (veja [Rodar localmente](#rodar-localmente)).
