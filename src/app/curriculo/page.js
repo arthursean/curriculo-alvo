@@ -1,14 +1,31 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Curriculo from "@/frontend/components/Curriculo";
-import { carregarPerfil } from "@/frontend/lib/api";
+import CurriculoEditavel from "@/frontend/components/CurriculoEditavel";
+import { carregarPerfil, salvarPerfil } from "@/frontend/lib/api";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 import { perfilCompleto } from "@/shared/perfil";
 
 export default function CurriculoBase() {
-  const { dados: perfil, erro } = useProtegido(carregarPerfil);
-  if (erro) return <div className="alerta">{erro}</div>;
+  const { dados, erro: erroCarga } = useProtegido(carregarPerfil);
+  const [perfil, setPerfil] = useState(null);
+  const [erro, setErro] = useState("");
+  useEffect(() => setPerfil(dados), [dados]);
+
+  if (erroCarga) return <div className="alerta">{erroCarga}</div>;
   if (!perfil) return <div className="vazio">Carregando…</div>;
+
+  // A edição manual do currículo base fica guardada junto do perfil.
+  async function guardarEdicao(edicaoBase) {
+    const novo = { ...perfil, edicaoBase };
+    setPerfil(novo);
+    try {
+      await salvarPerfil(novo);
+    } catch (e) {
+      setErro(`Não foi possível salvar: ${e.message}`);
+    }
+  }
 
   return (
     <div className="stack">
@@ -25,7 +42,14 @@ export default function CurriculoBase() {
       {!perfilCompleto(perfil) && (
         <div className="alerta nao-imprimir">Seu perfil ainda está vazio. <Link href="/perfil">Preencha o perfil</Link> para montar o currículo.</div>
       )}
-      <Curriculo perfil={perfil} />
+      {erro && <div className="alerta nao-imprimir">{erro}</div>}
+      <CurriculoEditavel
+        htmlSalvo={perfil.edicaoBase?.html || null}
+        onSalvar={(html) => guardarEdicao({ html, em: new Date().toISOString() })}
+        onDescartar={() => guardarEdicao(null)}
+      >
+        <Curriculo perfil={perfil} />
+      </CurriculoEditavel>
     </div>
   );
 }

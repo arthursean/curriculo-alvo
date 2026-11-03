@@ -116,6 +116,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 
 .auth { max-width: 440px; margin: 24px auto 0; }
 
+/* Edição do currículo */
+.barra-edicao { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 220px; }
+.barra-edicao .btn { min-width: 38px; }
+.cv-editando { outline: none; }
+.cv-editando .cv { box-shadow: 0 0 0 2px var(--primary), 0 2px 20px rgba(0,0,0,.08); cursor: text; }
+.cv-editando .cv:focus-within { box-shadow: 0 0 0 3px var(--primary), 0 2px 20px rgba(0,0,0,.08); }
+
 /* Mês e ano */
 .mes-ano { display: grid; grid-template-columns: 1fr 1.2fr; gap: 6px; }
 .mes-ano select:disabled { opacity: .5; }
@@ -177,6 +184,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
   body { background: #fff; }
   .nao-imprimir, .nav { display: none !important; }
   .container { padding: 0; max-width: none; }
-  .cv { box-shadow: none; padding: 0; max-width: none; }
+  .cv, .cv-editando .cv { box-shadow: none; padding: 0; max-width: none; }
   .cv .skill.destaque { background: none; border-color: #dfe3ec; color: inherit; font-weight: normal; }
 }

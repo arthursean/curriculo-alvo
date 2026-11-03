@@ -3,10 +3,11 @@
 Site para criar seu perfil profissional, gerar um currículo base, buscar vagas-alvo com filtros e gerar um currículo personalizado para cada vaga escolhida, com contas de usuário seguras.
 
 - **Contas** (`/cadastrar`, `/entrar`, `/esqueci-senha`, `/conta`): senha com hash scrypt, sessão em cookie HttpOnly, recuperação de senha por e-mail, troca de senha e exclusão da conta.
-- **Perfil** (`/perfil`): dados pessoais, resumo, competências, experiências, formação, idiomas e certificações, salvos na conta.
+- **Perfil** (`/perfil`): dados pessoais, resumo, competências, experiências, projetos (opcional), formação, idiomas e certificações, salvos na conta.
 - **Currículo base** (`/curriculo`): pronto para imprimir ou salvar em PDF.
 - **Busca de vagas** (`/vagas`): palavras-chave, cidade e data de publicação; filtros de modalidade (remoto, híbrido, presencial), nível do cargo e área.
 - **Currículo por vaga** (`/personalizar`): algoritmo próprio, sem IA paga, que mostra compatibilidade, o que você atende, lacunas e dicas.
+- **Edição do currículo:** antes do PDF, dá para editar o texto e a formatação (negrito, itálico, sublinhado, listas) direto na folha. A versão editada fica salva e pode ser descartada.
 - **Currículos salvos** (`/meus-curriculos`).
 
 ## Rodar localmente

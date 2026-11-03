@@ -125,6 +125,37 @@ export default function Perfil() {
 
       <section className="card stack">
         <div className="row between">
+          <div>
+            <h2 style={{ margin: 0 }}>Projetos <span className="muted small" style={{ fontWeight: 400 }}>(opcional)</span></h2>
+            <p className="muted small" style={{ margin: "2px 0 0" }}>Projetos pessoais, acadêmicos, freelas ou open source. Só aparecem no currículo se você cadastrar.</p>
+          </div>
+          <button className="btn sec sm" onClick={() => adicionar("projetos", { nome: "", link: "", inicio: "", fim: "", tecnologias: "", descricao: "" })}>+ Adicionar projeto</button>
+        </div>
+        {perfil.projetos.map((p) => (
+          <div key={p.id} className="item stack">
+            <div className="grid-2">
+              <Campo rotulo="Nome do projeto"><input value={p.nome} onChange={(ev) => setLista("projetos", p.id, "nome", ev.target.value)} placeholder="App de controle financeiro" /></Campo>
+              <Campo rotulo="Link (opcional)"><input value={p.link} onChange={(ev) => setLista("projetos", p.id, "link", ev.target.value)} placeholder="github.com/voce/projeto" /></Campo>
+              <Campo rotulo="Início"><MesAno valor={p.inicio} onChange={(v) => setLista("projetos", p.id, "inicio", v)} /></Campo>
+              <Campo rotulo="Fim (vazio se em andamento)"><MesAno valor={p.fim} onChange={(v) => setLista("projetos", p.id, "fim", v)} /></Campo>
+            </div>
+            <Campo rotulo="Tecnologias / ferramentas">
+              <input value={p.tecnologias} onChange={(ev) => setLista("projetos", p.id, "tecnologias", ev.target.value)} placeholder="React, Node.js, PostgreSQL" />
+            </Campo>
+            <Campo rotulo="O que você fez e resultados (um por linha)">
+              <textarea value={p.descricao} onChange={(ev) => setLista("projetos", p.id, "descricao", ev.target.value)} placeholder={"Desenvolvi o app do zero, com login e gráficos de gastos\n200 usuários ativos no primeiro mês"} />
+            </Campo>
+            <div className="row">
+              <button className="btn ghost sm" onClick={() => mover("projetos", p.id, -1)}>↑ Subir</button>
+              <button className="btn ghost sm" onClick={() => mover("projetos", p.id, 1)}>↓ Descer</button>
+              <button className="btn ghost sm" onClick={() => remover("projetos", p.id)}>Remover</button>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="card stack">
+        <div className="row between">
           <h2 style={{ margin: 0 }}>Formação</h2>
           <button className="btn sec sm" onClick={() => adicionar("formacao", { curso: "", instituicao: "", inicio: "", fim: "", status: "Concluído" })}>+ Adicionar formação</button>
         </div>

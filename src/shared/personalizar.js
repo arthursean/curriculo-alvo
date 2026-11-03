@@ -79,6 +79,7 @@ function skillsDoPerfil(perfil, universo) {
   const textoLivre = [
     perfil.titulo, perfil.resumo, perfil.certificacoes.join("\n"),
     ...perfil.experiencias.map((e) => `${e.cargo}\n${e.descricao}`), ...perfil.formacao.map((f) => f.curso),
+    ...(perfil.projetos || []).map((p) => `${p.nome}\n${p.tecnologias}\n${p.descricao}`),
   ].join("\n");
   const tem = new Map(); // nome -> { origem, exibir }
   for (const s of universo) {
@@ -237,6 +238,21 @@ export function personalizar(perfil, vaga) {
     .map(({ _p, _o, ...e }, i) => (_p <= 2 && i > 0 && e.itens.length > 2 ? { ...e, itens: e.itens.slice(0, 2) } : e))
     .map((e) => ({ ...e, itens: e.itens.map(anotar) }));
 
+  // Projetos (opcionais): mesma lógica; tecnologias contam bastante, e os sem relação com a vaga
+  // ficam no fim com até 2 tópicos.
+  const projetos = (perfil.projetos || [])
+    .filter((p) => p.nome?.trim() || p.descricao?.trim())
+    .map((p, ordem) => {
+      const itens = linhas(p.descricao)
+        .map((l, i) => ({ l, i, p: pontuar(l) + (/\d/.test(l) ? 1 : 0) }))
+        .sort((a, b) => b.p - a.p || a.i - b.i)
+        .map((x) => x.l);
+      return { ...p, itens, _p: pontuar(`${p.nome}\n${p.tecnologias}\n${p.descricao}`), _o: ordem };
+    })
+    .sort((a, b) => b._p - a._p || a._o - b._o)
+    .map(({ _p, _o, ...p }, i) => (_p <= 2 && i > 0 && p.itens.length > 2 ? { ...p, itens: p.itens.slice(0, 2) } : p))
+    .map((p) => ({ ...p, itens: p.itens.map(anotar) }));
+
   // ---- Compatibilidade ----------------------------------------------------------------
   const pesoTotal = termos.reduce((s, t) => s + t.peso * (t.obrigatorio ? 1.5 : 1), 0);
   const pesoAtendido = termos.reduce((s, t) => s + t.peso * (t.obrigatorio ? 1.5 : 1) * CREDITO[t.tipo], 0);
@@ -311,7 +327,7 @@ export function personalizar(perfil, vaga) {
   }
   if (fortes.length) partes.push(`Experiência prática com ${listar(fortes)}, competências centrais para a posição de ${limparTitulo(vaga.titulo)}.`);
   // Resultado citado: o tópico com número mais ligado à vaga.
-  const resultado = experiencias
+  const resultado = [...experiencias, ...projetos]
     .flatMap((e) => e.itens || [])
     .filter((l) => /\d/.test(l))
     .map((l, i) => ({ l, p: pontuar(l) - i * 0.01 }))
@@ -334,6 +350,7 @@ export function personalizar(perfil, vaga) {
     destaques,
     palavras,
     experiencias,
+    projetos,
     compatibilidade: Math.max(0, Math.min(100, compatibilidade)),
     atendidos: listaAtendidos,
     relacionados: parecidos.map((t) => `${t.nome} (você tem ${exibir(t.via)})`),

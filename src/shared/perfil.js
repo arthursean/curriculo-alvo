@@ -10,6 +10,7 @@ export const perfilVazio = {
   resumo: "",
   competencias: [],
   experiencias: [],
+  projetos: [], // opcional: { id, nome, link, inicio, fim, tecnologias, descricao }
   formacao: [],
   idiomas: [],
   certificacoes: [],

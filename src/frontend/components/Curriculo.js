@@ -41,6 +41,7 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
   const competencias = ajuste?.competencias || perfil.competencias;
   const destaques = new Set(ajuste?.destaques || []);
   const experiencias = ajuste?.experiencias || perfil.experiencias;
+  const projetos = (ajuste?.projetos || perfil.projetos || []).filter((p) => p.nome?.trim() || p.descricao?.trim());
   const contato = [perfil.email, perfil.telefone, perfil.cidade, perfil.linkedin, perfil.site].filter(Boolean);
   const re = regexPalavras(ajuste?.palavras);
 
@@ -82,6 +83,25 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
                 <span className="periodo">{periodo(e.inicio, e.fim, e.atual, r)}</span>
               </div>
               {itensDe(e).length > 0 && <ul>{itensDe(e).map((l, i) => <li key={i}><Destacar texto={l} re={re} /></li>)}</ul>}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {projetos.length > 0 && (
+        <section>
+          <h2>{r.projetos}</h2>
+          {projetos.map((p) => (
+            <div key={p.id} className="exp">
+              <div className="exp-topo">
+                <div>
+                  <strong>{p.nome}</strong>
+                  {p.tecnologias && <span style={{ color: "#666" }}> · <Destacar texto={p.tecnologias} re={re} /></span>}
+                </div>
+                <span className="periodo">{periodo(p.inicio, p.fim, Boolean(p.inicio && !p.fim), r)}</span>
+              </div>
+              {p.link && <div className="periodo" style={{ whiteSpace: "normal" }}>{p.link}</div>}
+              {itensDe(p).length > 0 && <ul>{itensDe(p).map((l, i) => <li key={i}><Destacar texto={l} re={re} /></li>)}</ul>}
             </div>
           ))}
         </section>

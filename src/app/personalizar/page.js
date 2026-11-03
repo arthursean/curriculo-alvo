@@ -3,6 +3,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Curriculo from "@/frontend/components/Curriculo";
+import CurriculoEditavel from "@/frontend/components/CurriculoEditavel";
 import { personalizar } from "@/shared/personalizar";
 import { detectarIdioma, IDIOMAS_CV } from "@/shared/traducao";
 import { traduzirCurriculo } from "@/frontend/lib/tradutor";
@@ -29,10 +30,12 @@ function Personalizar() {
   const [traduzindo, setTraduzindo] = useState("");
   const [erro, setErro] = useState("");
   const [salvo, setSalvo] = useState(false);
+  // Versão editada à mão: { html, idioma, em }
+  const [edicao, setEdicao] = useState(null);
 
-  function salvar(v, aj, tr) {
+  function salvar(v, aj, tr, ed) {
     setSalvo(false);
-    salvarCurriculo(v, { ...aj, traducao: tr || null })
+    return salvarCurriculo(v, { ...aj, traducao: tr || null, edicao: ed || null })
       .then(() => setSalvo(true))
       .catch((e) => setErro(`Não foi possível salvar: ${e.message}`));
   }
@@ -56,7 +59,10 @@ function Personalizar() {
     // A tradução salva só vale se o perfil não mudou desde então.
     const trValida = tr && !perfilMudou ? tr : null;
     setTraducao(trValida);
-    salvar(v, novo, trValida);
+    // A edição manual é do usuário: é mantida mesmo que o perfil mude (ele pode descartar).
+    const ed = existente?.ajuste?.edicao || null;
+    setEdicao(ed);
+    salvar(v, novo, trValida, ed);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dados, vagaId]);
 
@@ -64,7 +70,7 @@ function Personalizar() {
     setErro("");
     if (idiomaAlvo === "pt") {
       setTraducao(null);
-      salvar(vaga, ajuste, null);
+      salvar(vaga, ajuste, null, edicao);
       return;
     }
     try {
@@ -72,7 +78,7 @@ function Personalizar() {
       const r = await traduzirCurriculo(dados.perfil, ajuste, idiomaAlvo, setTraduzindo);
       const tr = { idioma: idiomaAlvo, perfil: r.perfil, ajuste: r.ajuste, motor: r.motor };
       setTraducao(tr);
-      salvar(vaga, ajuste, tr);
+      salvar(vaga, ajuste, tr, edicao);
     } catch (e) {
       setErro(e.message || "Falha na tradução.");
     } finally {
@@ -169,7 +175,24 @@ function Personalizar() {
         )}
       </div>
 
-      {ajuste && <Curriculo perfil={exibido.perfil} ajuste={exibido.ajuste} idioma={exibido.idioma} />}
+      {ajuste && (
+        <CurriculoEditavel
+          key={exibido.idioma}
+          // Cada idioma tem a sua edição: a feita em português não aparece na versão em inglês.
+          htmlSalvo={edicao?.idioma === exibido.idioma ? edicao.html : null}
+          onSalvar={(html) => {
+            const ed = { html, idioma: exibido.idioma, em: new Date().toISOString() };
+            setEdicao(ed);
+            return salvar(vaga, ajuste, traducao, ed);
+          }}
+          onDescartar={() => {
+            setEdicao(null);
+            salvar(vaga, ajuste, traducao, null);
+          }}
+        >
+          <Curriculo perfil={exibido.perfil} ajuste={exibido.ajuste} idioma={exibido.idioma} />
+        </CurriculoEditavel>
+      )}
     </div>
   );
 }
