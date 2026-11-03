@@ -132,7 +132,7 @@ function Personalizar() {
               <div className="row between small"><strong>Compatibilidade estimada</strong><span>{ajuste.compatibilidade}%</span></div>
               <div className="barra" style={{ marginTop: 6 }}><div style={{ width: `${ajuste.compatibilidade}%` }} /></div>
               <p className="muted small" style={{ marginTop: 8 }}>
-                Título, resumo, competências e tópicos ajustados ao que a vaga pede; palavras-chave da vaga em negrito. Recalculado sempre que você abre a vaga. {salvo && "Salvo na sua conta."}
+                Título, resumo, competências e tópicos ajustados ao que a vaga pede, considerando a relação entre skills (ex.: PostgreSQL atende SQL). Palavras-chave em negrito. Recalculado sempre que você abre a vaga. {salvo && "Salvo na sua conta."}
               </p>
               {ajuste.atendidos?.length > 0 && (
                 <>
@@ -142,6 +142,12 @@ function Personalizar() {
               )}
             </div>
             <div>
+              {ajuste.relacionados?.length > 0 && (
+                <>
+                  <strong className="small">Você tem algo parecido</strong>
+                  <div className="tags" style={{ margin: "6px 0 12px" }}>{ajuste.relacionados.map((d) => <span key={d} className="tag pri">{d}</span>)}</div>
+                </>
+              )}
               {ajuste.lacunas?.length > 0 && (
                 <>
                   <strong className="small">A vaga pede, mas não aparece no seu perfil</strong>
