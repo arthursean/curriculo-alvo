@@ -8,6 +8,68 @@ async function buscarJson(url) {
   return res.json();
 }
 
+// Gupy: portal público de vagas (portal.gupy.io), sem chave. API não oficial: pode mudar sem aviso.
+const MODALIDADE_GUPY = { remote: "remoto", hybrid: "hibrido", "on-site": "presencial" };
+const NIVEL_GUPY = { vacancy_type_internship: "estagio", vacancy_type_trainee: "estagio", vacancy_type_apprentice: "estagio", vacancy_type_junior_apprentice: "estagio" };
+async function gupy(q) {
+  const data = await buscarJson(`https://portal.gupy.io/api/job-search/jobs?jobName=${encodeURIComponent(q)}&limit=60&offset=0`);
+  return (data.data || []).map((j) => ({
+    id: `gupy-${j.id}`,
+    titulo: j.name?.trim(),
+    empresa: j.careerPageName || "Empresa confidencial",
+    local: j.workplaceType === "remote" ? "Remoto" : [j.city, j.state].filter(Boolean).join(", ") || "Brasil",
+    descricao: j.description,
+    url: j.jobUrl,
+    publicadaEm: j.publishedDate,
+    categoria: "",
+    salario: null,
+    tags: [],
+    modalidade: MODALIDADE_GUPY[j.workplaceType],
+    nivel: NIVEL_GUPY[j.type],
+    fonte: "Gupy",
+  }));
+}
+
+// Sólides Vagas: portal público (vagas.solides.com.br), sem chave. API não oficial: pode mudar sem aviso.
+const MODALIDADE_SOLIDES = { remoto: "remoto", hibrido: "hibrido", presencial: "presencial" };
+function nivelSolides(senioridades = []) {
+  const n = senioridades.map((s) => s.name).join(" ").toLowerCase();
+  if (/estag|trainee|aprendiz/.test(n)) return "estagio";
+  if (/gerente|diretor|coorden|lider|líder|supervis/.test(n)) return "lideranca";
+  if (/s[eê]nior|especialista/.test(n)) return "senior";
+  if (/pleno/.test(n)) return "pleno";
+  if (/j[uú]nior/.test(n)) return "junior";
+  return undefined;
+}
+async function solides(q) {
+  // A API aceita no máximo 25 por página (acima disso responde 500): buscamos 2 páginas.
+  const paginas = await Promise.all([1, 2].map((p) =>
+    buscarJson(`https://vagas.solides.com.br/api/vacancies?page=${p}&take=25&title=${encodeURIComponent(q)}&locations=`).catch(() => ({ data: [] }))));
+  const lista = paginas.flatMap((d) => d.data || []);
+  if (!lista.length && paginas.every((d) => !d.data)) throw new Error("Sólides indisponível");
+  return lista.map((j) => {
+    const s = j.salary;
+    const salario = s?.showRangeToApplicant && s.finalRange > 0
+      ? (s.initialRange > 0 ? `R$ ${s.initialRange.toLocaleString("pt-BR")} – R$ ${s.finalRange.toLocaleString("pt-BR")}` : `até R$ ${s.finalRange.toLocaleString("pt-BR")}`)
+      : null;
+    return {
+      id: `solides-${j.id}`,
+      titulo: j.title?.trim(),
+      empresa: j.companyName || "Empresa confidencial",
+      local: j.homeOffice ? "Remoto" : [j.city?.name, j.state?.code].filter(Boolean).join(", ") || "Brasil",
+      descricao: j.description,
+      url: `https://vagas.solides.com.br/vaga/${j.id}`,
+      publicadaEm: j.createdAt,
+      categoria: "",
+      salario,
+      tags: (j.hardSkills || []).map((h) => h.name).filter(Boolean),
+      modalidade: MODALIDADE_SOLIDES[j.jobType] || (j.homeOffice ? "remoto" : undefined),
+      nivel: nivelSolides(j.seniority),
+      fonte: "Sólides",
+    };
+  });
+}
+
 // Adzuna: vagas do Brasil (precisa de ADZUNA_APP_ID e ADZUNA_APP_KEY gratuitos).
 async function adzuna(q, local, dias) {
   const { ADZUNA_APP_ID: id, ADZUNA_APP_KEY: key } = process.env;
@@ -89,7 +151,9 @@ export async function GET(req) {
   if (!q) return Response.json({ erro: "Digite ao menos uma palavra-chave." }, { status: 400 });
 
   const fontes = [
-    ["Adzuna (Brasil)", adzuna(q, local, dias)],
+    ["Gupy", gupy(q)],
+    ["Sólides", solides(q)],
+    ["Adzuna", adzuna(q, local, dias)],
     ["Remotive", remotive(q)],
     ["Arbeitnow", arbeitnow(q)],
   ];
@@ -100,7 +164,7 @@ export async function GET(req) {
   resultados.forEach((r, i) => {
     const nome = fontes[i][0];
     if (r.status === "rejected") status.push({ nome, ok: false, detalhe: String(r.reason?.message || r.reason) });
-    else if (r.value === null) status.push({ nome, ok: false, detalhe: "não configurada" });
+    else if (r.value === null) return; // fonte opcional sem chave configurada
     else {
       const lista = nome === "Arbeitnow" ? r.value.filter((v) => bateComBusca(v, q)) : r.value;
       status.push({ nome, ok: true, total: lista.length });
@@ -117,5 +181,5 @@ export async function GET(req) {
 
   vagas.sort((a, b) => new Date(b.publicadaEm) - new Date(a.publicadaEm));
 
-  return Response.json({ vagas: vagas.slice(0, 120), fontes: status });
+  return Response.json({ vagas: vagas.slice(0, 200), fontes: status });
 }

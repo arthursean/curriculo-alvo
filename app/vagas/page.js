@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AREAS, MODALIDADES, NIVEIS } from "@/lib/vagas";
 import { tempoRelativo } from "@/lib/texto";
+import { IDIOMAS_CV } from "@/lib/traducao";
 import { api, carregarCurriculos, guardarVagaAtual, useProtegido } from "@/lib/cliente";
 
 const PERIODOS = [
@@ -16,6 +17,7 @@ const PERIODOS = [
 const NIVEL_NOME = Object.fromEntries([...NIVEIS.map((n) => [n.id, n.nome]), ["nao_informado", "Nível não informado"]]);
 const AREA_NOME = Object.fromEntries([...AREAS.map((a) => [a.id, a.nome]), ["outros", "Outras áreas"]]);
 const MOD_NOME = Object.fromEntries(MODALIDADES.map((m) => [m.id, m.nome]));
+const IDIOMA_NOME = Object.fromEntries(IDIOMAS_CV.map((i) => [i.id, i.nome]));
 
 function alternar(lista, valor) {
   return lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor];
@@ -177,6 +179,7 @@ export default function Vagas() {
                     <span className="tag pri">{MOD_NOME[v.modalidade]}</span>
                     <span className="tag">{NIVEL_NOME[v.nivel]}</span>
                     <span className="tag">{AREA_NOME[v.area]}</span>
+                    {v.idioma && v.idioma !== "pt" && <span className="tag warn">Vaga em {IDIOMA_NOME[v.idioma]?.toLowerCase()}</span>}
                     {v.salario && <span className="tag ok">{v.salario}</span>}
                   </div>
                   <p className="desc">{v.descricao}</p>

@@ -29,11 +29,24 @@ Arquivo `lib/personalizar.js`, executado no navegador:
 3. Cruza com o perfil para calcular a compatibilidade, ordenar competências, experiências e tópicos, e apontar lacunas, idiomas exigidos e diferença de senioridade.
 4. Monta o resumo com fatos do perfil. Nada é inventado.
 
+## Tradução do currículo
+
+O idioma de cada vaga é detectado automaticamente (pt, en, es, fr, de). O currículo pode ser traduzido sem custo:
+
+1. **Tradutor embutido do navegador** (Chrome 138+): roda no aparelho, e nada sai do computador.
+2. **MyMemory** (gratuito), chamado direto do navegador de cada usuário, com cota diária por usuário.
+
+Títulos das seções, níveis de idioma e datas usam textos fixos; nomes de ferramentas (React, Git, Excel…) não são traduzidos.
+
+InHire não tem busca geral de vagas: cada empresa tem a sua página própria (`empresa.inhire.app`).
+
 ## Fontes de vagas
 
 | Fonte | Chave | Observação |
 |---|---|---|
-| Adzuna | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Vagas do Brasil |
+| Gupy | não precisa | Vagas do Brasil (API pública do portal, não oficial) |
+| Sólides | não precisa | Vagas do Brasil (API pública do portal, não oficial; máx. 25 por página) |
+| Adzuna | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Opcional, vagas do Brasil |
 | Remotive | não precisa | Vagas remotas internacionais |
 | Arbeitnow | não precisa | Vagas internacionais |
 
