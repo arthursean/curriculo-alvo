@@ -153,7 +153,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .autocompletar { position: relative; }
 .sugestoes {
   position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px);
-  margin: 0; padding: 4px; list-style: none; max-height: 220px; overflow-y: auto;
+  margin: 0; padding: 4px; list-style: none; max-height: 220px; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15);
 }
 .sugestoes li { padding: 7px 10px; border-radius: 6px; cursor: pointer; }

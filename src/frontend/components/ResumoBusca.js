@@ -22,7 +22,15 @@ export default function ResumoBusca({ vagas, avaliacoes }) {
         contagem.set(r.nome, c);
       }
     }
-    const frequentes = [...contagem.values()].filter((c) => c.n / total >= 0.1).sort((a, b) => b.n - a.n).slice(0, 14);
+    // Só os mais relevantes: pedidos em pelo menos 20% das vagas, no máximo 8.
+    // Variações do mesmo termo ("APIs" e "APIs REST") contam uma vez só, pela mais frequente.
+    const frequentes = [];
+    for (const c of [...contagem.values()].filter((c) => c.n / total >= 0.2).sort((a, b) => b.n - a.n)) {
+      const nome = c.nome.toLowerCase();
+      if (frequentes.some((f) => nome.startsWith(f.nome.toLowerCase()) || f.nome.toLowerCase().startsWith(nome))) continue;
+      frequentes.push(c);
+      if (frequentes.length === 8) break;
+    }
     const conta = (campo) => {
       const m = new Map();
       for (const [v] of avaliadas) m.set(v[campo], (m.get(v[campo]) || 0) + 1);

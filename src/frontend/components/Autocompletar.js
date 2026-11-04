@@ -5,7 +5,6 @@ import { normalizar } from "@/shared/texto";
 // Campo com sugestões: a lista fica escondida e aparece filtrada conforme a digitação.
 // Setas ↑/↓ navegam, Enter escolhe, Esc fecha. Texto fora da lista é aceito, a não ser com
 // `restrito`: aí, ao sair do campo, só fica um valor da lista (ex.: "rwcife" não passa como cidade).
-const MAX_SUGESTOES = 80;
 
 export default function Autocompletar({ valor, onChange, opcoes, placeholder, style, restrito = false, disabled = false, id }) {
   const [aberto, setAberto] = useState(false);
@@ -20,7 +19,8 @@ export default function Autocompletar({ valor, onChange, opcoes, placeholder, st
     const contem = opcoes.filter((o) => !comeca.includes(o) && normalizar(o).includes(t));
     return [...comeca, ...contem];
   }, [valor, opcoes]);
-  const visiveis = filtradas.slice(0, MAX_SUGESTOES);
+  // Mostra todas: a lista rola até o fim (MG, o maior estado, tem 853 cidades).
+  const visiveis = filtradas;
 
   // Modo restrito: ao sair, troca o texto pela opção igual (ignorando acento/maiúscula) ou limpa.
   function validar() {
