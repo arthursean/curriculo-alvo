@@ -1,5 +1,5 @@
 "use client";
-import { NOMES } from "@/shared/traducao";
+import { NOMES, detectarIdiomaPerfil } from "@/shared/traducao";
 
 // ---- Tradução sem custo -------------------------------------------------------------
 // 1º: tradutor embutido do navegador (Chrome 138+): roda no aparelho, nada sai do computador.
@@ -76,8 +76,9 @@ function limpar(original, traduzido) {
 const traduzivel = (t) => /\s/.test(t.trim()) || /[^\x00-\x7F]/.test(t);
 
 // Traduz o perfil e o ajuste de uma vez. Devolve versões novas, sem alterar as originais.
-export async function traduzirCurriculo(perfil, ajuste, para, aoProgresso) {
-  const de = "pt";
+// Sempre parte do texto ORIGINAL (no idioma em que o perfil foi escrito, `de`), nunca de uma
+// tradução anterior: trocar de inglês para espanhol traduz de novo a partir do original.
+export async function traduzirCurriculo(perfil, ajuste, para, aoProgresso, de = detectarIdiomaPerfil(perfil)) {
   if (para === de) return { perfil, ajuste, motor: null };
   const motor = (await tradutorDoNavegador(de, para, aoProgresso)) || myMemory(de, para);
 

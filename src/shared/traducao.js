@@ -81,3 +81,14 @@ export function detectarIdioma(texto) {
   for (const p of palavras) for (const l in conjuntos) if (conjuntos[l].has(p)) contagem[l]++;
   return Object.entries(contagem).sort((a, b) => b[1] - a[1])[0][0];
 }
+
+// Idioma em que o perfil foi escrito: é dele que toda tradução parte (nunca de uma tradução anterior).
+export function detectarIdiomaPerfil(perfil) {
+  const texto = [
+    perfil.resumo, perfil.softSkills,
+    ...perfil.experiencias.map((e) => `${e.cargo}\n${e.descricao}`),
+    ...(perfil.projetos || []).map((p) => p.descricao),
+    ...perfil.formacao.map((f) => `${f.curso}\n${f.descricao || ""}`),
+  ].filter(Boolean).join("\n");
+  return texto.trim() ? detectarIdioma(texto) : "pt";
+}

@@ -6,7 +6,7 @@ import Curriculo from "@/frontend/components/Curriculo";
 import CurriculoEditavel from "@/frontend/components/CurriculoEditavel";
 import PainelConteudo from "@/frontend/components/PainelConteudo";
 import { personalizar } from "@/shared/personalizar";
-import { detectarIdioma, IDIOMAS_CV } from "@/shared/traducao";
+import { detectarIdioma, detectarIdiomaPerfil, IDIOMAS_CV } from "@/shared/traducao";
 import { traduzirCurriculo } from "@/frontend/lib/tradutor";
 import { carregarCurriculos, carregarPerfil, salvarCurriculo } from "@/frontend/lib/api";
 import { lerVagaAtual } from "@/frontend/lib/navegacao";
@@ -106,14 +106,16 @@ function Personalizar() {
 
   async function traduzir() {
     setErro("");
-    if (idiomaAlvo === "pt") {
+    const original = detectarIdiomaPerfil(dados.perfil);
+    if (idiomaAlvo === original) {
       setTraducao(null);
       salvar(vaga, ajuste, null, edicao);
       return;
     }
     try {
       setTraduzindo("Preparando tradução…");
-      const r = await traduzirCurriculo(dados.perfil, ajuste, idiomaAlvo, setTraduzindo);
+      // Sempre do texto original do perfil (dados.perfil + ajuste), nunca de uma tradução anterior.
+      const r = await traduzirCurriculo(dados.perfil, ajuste, idiomaAlvo, setTraduzindo, original);
       const tr = { idioma: idiomaAlvo, perfil: r.perfil, ajuste: r.ajuste, motor: r.motor };
       setTraducao(tr);
       salvar(vaga, ajuste, tr, edicao);
@@ -132,7 +134,8 @@ function Personalizar() {
   }
 
   const idiomaVaga = vaga.idioma || detectarIdioma(`${vaga.titulo}\n${vaga.descricao}`);
-  const exibido = traducao ? { perfil: traducao.perfil, ajuste: traducao.ajuste, idioma: traducao.idioma } : { perfil, ajuste, idioma: "pt" };
+  const idiomaOriginal = detectarIdiomaPerfil(perfil);
+  const exibido = traducao ? { perfil: traducao.perfil, ajuste: traducao.ajuste, idioma: traducao.idioma } : { perfil, ajuste, idioma: idiomaOriginal };
 
   return (
     <div className="stack">
@@ -158,7 +161,8 @@ function Personalizar() {
           <div className="item row">
             <div style={{ flex: 1, minWidth: 220 }}>
               <strong className="small">Idioma do currículo</strong>
-              {idiomaVaga !== "pt" && !traducao && (
+              <p className="muted small" style={{ margin: "2px 0 0" }}>Seu perfil está em {NOME_IDIOMA[idiomaOriginal]?.toLowerCase()}; toda tradução parte desse texto original.</p>
+              {idiomaVaga !== idiomaOriginal && !traducao && (
                 <p className="small" style={{ margin: "2px 0 0", color: "var(--warn)" }}>
                   A vaga está em {NOME_IDIOMA[idiomaVaga]?.toLowerCase()}: recomendamos enviar o currículo no mesmo idioma.
                 </p>
@@ -166,10 +170,14 @@ function Personalizar() {
               {traducao && <p className="muted small" style={{ margin: "2px 0 0" }}>Traduzido para {NOME_IDIOMA[traducao.idioma]?.toLowerCase()} ({traducao.motor}). Revise antes de enviar.</p>}
             </div>
             <select style={{ width: "auto" }} value={idiomaAlvo} onChange={(e) => setIdiomaAlvo(e.target.value)} disabled={!!traduzindo}>
-              {IDIOMAS_CV.map((i) => <option key={i.id} value={i.id}>{i.nome}{i.id === idiomaVaga ? " (idioma da vaga)" : ""}</option>)}
+              {IDIOMAS_CV.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.nome}{i.id === idiomaOriginal ? " (original)" : ""}{i.id === idiomaVaga ? " (idioma da vaga)" : ""}
+                </option>
+              ))}
             </select>
-            <button className="btn sec" disabled={!!traduzindo || (traducao?.idioma || "pt") === idiomaAlvo} onClick={traduzir}>
-              {traduzindo || (idiomaAlvo === "pt" ? "Voltar ao português" : "Traduzir currículo")}
+            <button className="btn sec" disabled={!!traduzindo || (traducao?.idioma || idiomaOriginal) === idiomaAlvo} onClick={traduzir}>
+              {traduzindo || (idiomaAlvo === idiomaOriginal ? "Voltar ao original" : "Traduzir currículo")}
             </button>
           </div>
         )}
@@ -217,6 +225,11 @@ function Personalizar() {
         <PainelConteudo
           secoes={ajuste.secoes}
           onAlternar={alternar}
+          onAdicionarCompetencia={(t) => {
+            const atuais = escolhas.competenciasExtras || [];
+            if (!atuais.some((x) => x.toLowerCase() === t.toLowerCase())) aplicarEscolhas({ ...escolhas, competenciasExtras: [...atuais, t] });
+          }}
+          onRemoverCompetenciaExtra={(t) => aplicarEscolhas({ ...escolhas, competenciasExtras: (escolhas.competenciasExtras || []).filter((x) => x !== t) })}
           onRestaurar={() => aplicarEscolhas({})}
         />
       )}

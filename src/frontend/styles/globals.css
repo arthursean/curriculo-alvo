@@ -130,6 +130,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .lista-conteudo .btn { width: 32px; padding: 4px 0; font-size: 1rem; line-height: 1; }
 .lista-conteudo .rotulo { flex: 1; min-width: 160px; }
 .lista-conteudo li.fora .rotulo { color: var(--muted); text-decoration: line-through; }
+.chips-conteudo { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip { border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: .85rem; cursor: pointer; width: auto; }
+.chip.dentro { background: var(--primary-soft); color: var(--primary); border-color: transparent; }
+.chip.fora { background: var(--surface); color: var(--muted); text-decoration: line-through; }
+.chip em { font-style: normal; opacity: .75; }
 
 /* Mês e ano */
 .mes-ano { display: grid; grid-template-columns: 1fr 1.2fr; gap: 6px; }
@@ -199,7 +204,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .cv hr { border: 0; border-top: 1px solid #a9b5b8; margin: 12pt 0 8pt; }
 .cv .cv-contato { font-size: 8pt; text-align: center; margin: 0; }
 .cv a { color: #1155CC; text-decoration: underline; }
-.cv .cv-resumo { font-size: 10pt; text-align: justify; margin: 14pt 0 0; }
+.cv .cv-resumo { font-size: 10pt; text-align: justify; margin: 14pt 0 0; white-space: pre-line; }
 .cv section { margin-top: 20pt; }
 .cv h2 { font-family: Verdana, Geneva, "DejaVu Sans", sans-serif; font-weight: bold; font-size: 14pt; color: #0C343D; text-transform: uppercase; margin: 0 0 23pt; }
 .cv .cv-item { margin-bottom: 14pt; break-inside: avoid; }
@@ -207,7 +212,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .cv .cv-item-sub { font-size: 9pt; text-transform: uppercase; margin: 0 0 4pt; }
 .cv .cv-item-texto { font-size: 10pt; text-align: justify; margin: 14pt 0 0; }
 .cv .cv-hard { font-size: 12pt; margin: 0; }
-.cv .cv-soft { font-size: 11pt; text-align: justify; line-height: 1.32; margin: 0; }
+.cv .cv-soft { font-size: 11pt; text-align: justify; line-height: 1.32; margin: 0; white-space: pre-line; }
 .cv p { margin-top: 0; }
 
 @media print {

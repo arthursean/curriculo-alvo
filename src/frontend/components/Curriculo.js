@@ -22,9 +22,14 @@ function itensDe(item) {
   return String(item.descricao || "").split("\n").map((l) => l.replace(/^[-*•\s]+/, "").trim()).filter(Boolean);
 }
 
-// Os tópicos viram um parágrafo corrido, como no modelo.
-function paragrafo(itens) {
-  return itens.map((t) => (/[.!?…:]$/.test(t) ? t : `${t}.`)).join(" ");
+// Cada tópico da descrição (uma linha no perfil) fica numa linha própria no currículo.
+function Linhas({ itens }) {
+  return itens.map((t, i) => (
+    <span key={i}>
+      {i > 0 && <br />}
+      {t}
+    </span>
+  ));
 }
 
 const linha = (...partes) => partes.filter(Boolean).join(" | ");
@@ -59,7 +64,7 @@ function Item({ titulo, subtitulo, itens }) {
     <div className="cv-item">
       <p className="cv-item-titulo">{titulo}</p>
       {subtitulo && <p className="cv-item-sub">{subtitulo}</p>}
-      {itens.length > 0 && <p className="cv-item-texto">{paragrafo(itens)}</p>}
+      {itens.length > 0 && <p className="cv-item-texto"><Linhas itens={itens} /></p>}
     </div>
   );
 }

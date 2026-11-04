@@ -7,6 +7,7 @@ import { carregarPerfil, salvarPerfil } from "@/frontend/lib/api";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 import { perfilCompleto } from "@/shared/perfil";
 import { estavel } from "@/shared/texto";
+import { detectarIdiomaPerfil } from "@/shared/traducao";
 
 export default function CurriculoBase() {
   const { dados, erro: erroCarga } = useProtegido(carregarPerfil);
@@ -54,7 +55,7 @@ export default function CurriculoBase() {
         onSalvar={(html) => guardarEdicao({ html, assinatura, em: new Date().toISOString() })}
         onDescartar={() => guardarEdicao(null)}
       >
-        <Curriculo perfil={perfil} />
+        <Curriculo perfil={perfil} idioma={detectarIdiomaPerfil(perfil)} />
       </CurriculoEditavel>
     </div>
   );

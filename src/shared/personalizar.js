@@ -10,6 +10,7 @@
 //     anotações como "PostgreSQL (SQL)" e palavras-chave em negrito. Nada é inventado.
 import { diasDesde, normalizar } from "./texto";
 import { classificarNivel } from "./vagas";
+import { detectarIdiomaPerfil } from "./traducao";
 import { SKILLS, ancestrais, ehAmplo, paiEmComum } from "./skills";
 
 const IDIOMAS = [["Inglês", "ingles", "english"], ["Espanhol", "espanhol", "spanish"], ["Francês", "frances", "french"], ["Alemão", "alemao", "german", "deutsch"]];
@@ -168,7 +169,51 @@ export function limparTitulo(titulo = "") {
   return (partes.sort((a, b) => b.split(/\s+/).length - a.split(/\s+/).length)[0] || titulo).trim();
 }
 
-const listar = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} e ${xs.at(-1)}` : xs[0] || "");
+const listar = (xs, e = "e") => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} ${e} ${xs.at(-1)}` : xs[0] || "");
+
+// Frases do resumo gerado, no idioma do perfil.
+const FRASES = {
+  pt: {
+    profissional: "Profissional", e: "e",
+    comAnos: (t, n) => `${t} com ${n} ano${n > 1 ? "s" : ""} de experiência`,
+    naEmpresa: (atual, emp) => `, ${atual ? "atualmente" : "mais recentemente"} na ${emp}`,
+    comoCargo: (atual, cargo, emp) => `, ${atual ? "atualmente" : "mais recentemente"} como ${cargo} na ${emp}`,
+    pratica: (lista, vaga) => `Experiência prática com ${lista}, competências centrais para a posição de ${vaga}.`,
+    resultado: (r) => `Entre os resultados: ${r}.`,
+  },
+  en: {
+    profissional: "Professional", e: "and",
+    comAnos: (t, n) => `${t} with ${n} year${n > 1 ? "s" : ""} of experience`,
+    naEmpresa: (atual, emp) => `, ${atual ? "currently" : "most recently"} at ${emp}`,
+    comoCargo: (atual, cargo, emp) => `, ${atual ? "currently" : "most recently"} as ${cargo} at ${emp}`,
+    pratica: (lista, vaga) => `Hands-on experience with ${lista}, core skills for the ${vaga} position.`,
+    resultado: (r) => `Key results: ${r}.`,
+  },
+  es: {
+    profissional: "Profesional", e: "y",
+    comAnos: (t, n) => `${t} con ${n} año${n > 1 ? "s" : ""} de experiencia`,
+    naEmpresa: (atual, emp) => `, ${atual ? "actualmente" : "más recientemente"} en ${emp}`,
+    comoCargo: (atual, cargo, emp) => `, ${atual ? "actualmente" : "más recientemente"} como ${cargo} en ${emp}`,
+    pratica: (lista, vaga) => `Experiencia práctica con ${lista}, competencias clave para el puesto de ${vaga}.`,
+    resultado: (r) => `Entre los resultados: ${r}.`,
+  },
+  fr: {
+    profissional: "Professionnel", e: "et",
+    comAnos: (t, n) => `${t} avec ${n} an${n > 1 ? "s" : ""} d’expérience`,
+    naEmpresa: (atual, emp) => `, ${atual ? "actuellement" : "plus récemment"} chez ${emp}`,
+    comoCargo: (atual, cargo, emp) => `, ${atual ? "actuellement" : "plus récemment"} en tant que ${cargo} chez ${emp}`,
+    pratica: (lista, vaga) => `Expérience pratique avec ${lista}, compétences clés pour le poste de ${vaga}.`,
+    resultado: (r) => `Parmi les résultats : ${r}.`,
+  },
+  de: {
+    profissional: "Fachkraft", e: "und",
+    comAnos: (t, n) => `${t} mit ${n} Jahr${n > 1 ? "en" : ""} Erfahrung`,
+    naEmpresa: (atual, emp) => `, ${atual ? "derzeit" : "zuletzt"} bei ${emp}`,
+    comoCargo: (atual, cargo, emp) => `, ${atual ? "derzeit" : "zuletzt"} als ${cargo} bei ${emp}`,
+    pratica: (lista, vaga) => `Praktische Erfahrung mit ${lista}, zentrale Kompetenzen für die Position ${vaga}.`,
+    resultado: (r) => `Ergebnisse: ${r}.`,
+  },
+};
 // "Frontend" -> "frontend", mas "JavaScript", "SQL" e "DevOps" ficam como estão.
 const minuscula = (t) => (/^[A-ZÀ-Ú][a-zà-ú]+(?:\s[a-zà-ú]+)*$/.test(t) ? t.charAt(0).toLowerCase() + t.slice(1) : t);
 
@@ -186,7 +231,8 @@ function analisarPerfil(perfil) {
 }
 
 // `escolhas` (opcional): o que o usuário incluiu (+) ou tirou (−) neste currículo, por seção e id:
-// { experiencias: { [id]: true|false }, projetos: {...}, formacao: {...} }.
+// { experiencias: { [id]: true|false }, projetos: {...}, formacao: {...}, competencias: { [texto]: true|false },
+//   competenciasExtras: ["texto adicionado só nesta vaga"] }.
 export function personalizar(perfil, vaga, escolhas = {}) {
   const { universo, porNome, doPerfil } = analisarPerfil(perfil);
   const { tem } = doPerfil;
@@ -200,6 +246,17 @@ export function personalizar(perfil, vaga, escolhas = {}) {
   // Formas que "cobrem" cada termo no seu texto: a própria skill, ou a sua skill que a implica / é parecida.
   const cobertura = (t) => [...t.formas, ...(t.via ? porNome.get(t.via)?.formas || [] : [])];
   const pontuar = (txt) => termos.reduce((s, t) => s + (CREDITO[t.tipo] && temAlguma(txt, cobertura(t)) ? t.peso * CREDITO[t.tipo] : 0), 0);
+
+  // Decide o que entra: a escolha do usuário para esta vaga (+ / −) manda; sem escolha, entra o que
+  // tem relação com a vaga. Devolve os itens incluídos e o resumo de cada um para o painel de escolhas.
+  const escolher = (lista, escolhasSecao = {}, { padrao, rotulo }) => {
+    const avaliados = lista.map((x, ordem) => ({ x, ordem, sugerida: padrao(x, ordem) }));
+    const painel = avaliados.map(({ x, sugerida }) => ({
+      id: x.id, rotulo: rotulo(x), sugerida, incluida: escolhasSecao[x.id] ?? sugerida, escolhaManual: x.id in escolhasSecao,
+    }));
+    const incluidos = avaliados.filter(({ x, sugerida }) => escolhasSecao[x.id] ?? sugerida);
+    return { incluidos, painel };
+  };
 
   // ---- Competências -------------------------------------------------------------------
   // Peso de uma skill sua para esta vaga: direto, ou pelo que ela implica / pelo parecido.
@@ -225,11 +282,24 @@ export function personalizar(perfil, vaga, escolhas = {}) {
     ...inferidas.map((n) => ({ texto: n, peso: pesoDaSkill(n) })),
     ...implicitas.map((n) => ({ texto: n, peso: termos.find((t) => t.nome === n).peso * 0.95 })),
   ];
+  // Competências que você adicionou só para esta vaga (texto seu, não vem do perfil).
+  const extras = (escolhas.competenciasExtras || []).map((t) => String(t).trim()).filter(Boolean)
+    .map((texto) => ({ texto, peso: 0.5, extra: true }));
   const vistos = new Set();
-  const competencias = itensComp
+  const candidatas = [...itensComp, ...extras]
     .filter((c) => !vistos.has(normalizar(c.texto)) && vistos.add(normalizar(c.texto)))
+    .map((c) => ({ ...c, id: c.texto }))
     .sort((a, b) => b.peso - a.peso);
-  const destaques = competencias.filter((c) => c.peso > 0).map((c) => c.texto);
+  // Sem relação com a vaga ficam de fora por padrão — mas só quando sobram ao menos 4 relevantes,
+  // para o currículo não ficar com a seção quase vazia. As adicionadas por você sempre entram.
+  const relevantes = candidatas.filter((c) => c.peso > 0).length;
+  const comp = escolher(candidatas, escolhas.competencias, {
+    padrao: (c) => c.extra || c.peso > 0 || relevantes < 4,
+    rotulo: (c) => c.texto,
+  });
+  for (const p of comp.painel) p.extra = candidatas.find((c) => c.id === p.id)?.extra || false;
+  const competencias = comp.incluidos.map(({ x }) => x);
+  const destaques = competencias.filter((c) => c.peso > 0 && !c.extra).map((c) => c.texto);
 
   // ---- Experiências e tópicos -------------------------------------------------------
   const tituloVaga = normalizar(vaga.titulo);
@@ -253,16 +323,6 @@ export function personalizar(perfil, vaga, escolhas = {}) {
     .map((l, i) => ({ l, i, p: pontuar(l) + (/\d/.test(l) ? 1 : 0) }))
     .sort((a, b) => b.p - a.p || a.i - b.i)
     .map((x) => x.l);
-  // Decide o que entra: a escolha do usuário para esta vaga (+ / −) manda; sem escolha, entra o que
-  // tem relação com a vaga. Devolve os itens incluídos e o resumo de cada um para o painel de escolhas.
-  const escolher = (lista, escolhasSecao = {}, { padrao, rotulo }) => {
-    const avaliados = lista.map((x, ordem) => ({ x, ordem, sugerida: padrao(x, ordem) }));
-    const painel = avaliados.map(({ x, sugerida }) => ({
-      id: x.id, rotulo: rotulo(x), sugerida, incluida: escolhasSecao[x.id] ?? sugerida, escolhaManual: x.id in escolhasSecao,
-    }));
-    const incluidos = avaliados.filter(({ x, sugerida }) => escolhasSecao[x.id] ?? sugerida);
-    return { incluidos, painel };
-  };
 
   // Experiências: as sem relação com a vaga ficam de fora (se nenhuma tiver, fica a mais recente).
   const relevanciaExp = (e) => {
@@ -353,15 +413,19 @@ export function personalizar(perfil, vaga, escolhas = {}) {
   // ---- Resumo, montado com fatos do perfil --------------------------------------------
   // O resumo cita só experiências que estão neste currículo.
   const recente = maisRecente(experiencias.length ? experiencias : perfil.experiencias);
+  // As frases geradas saem no idioma em que o perfil foi escrito (para a tradução partir de um texto
+  // todo no mesmo idioma, sem trechos misturados).
+  const F = FRASES[detectarIdiomaPerfil(perfil)] || FRASES.pt;
   const partes = [];
   if (perfil.resumo?.trim()) {
     partes.push(perfil.resumo.trim().replace(/([^.!?])$/, "$1."));
   } else {
-    const titulo = perfil.titulo || recente?.cargo || "Profissional";
-    let abertura = anos >= 1 ? `${titulo} com ${anos} ano${anos > 1 ? "s" : ""} de experiência` : titulo;
+    const titulo = perfil.titulo || recente?.cargo || F.profissional;
+    let abertura = anos >= 1 ? F.comAnos(titulo, anos) : titulo;
     if (recente?.empresa) {
-      const quando = recente.atual ? "atualmente" : "mais recentemente";
-      abertura += normalizar(recente.cargo) === normalizar(titulo) ? `, ${quando} na ${recente.empresa}` : `, ${quando} como ${recente.cargo} na ${recente.empresa}`;
+      abertura += normalizar(recente.cargo) === normalizar(titulo)
+        ? F.naEmpresa(recente.atual, recente.empresa)
+        : F.comoCargo(recente.atual, recente.cargo, recente.empresa);
     }
     partes.push(`${abertura}.`);
   }
@@ -377,7 +441,7 @@ export function personalizar(perfil, vaga, escolhas = {}) {
     usadas.add(minha);
     fortes.push(t.tipo === "implicito" && !t.categoria && !t.amplo ? `${minuscula(t.nome)} (${exibir(t.via)})` : exibir(minha));
   }
-  if (fortes.length) partes.push(`Experiência prática com ${listar(fortes)}, competências centrais para a posição de ${limparTitulo(vaga.titulo)}.`);
+  if (fortes.length) partes.push(F.pratica(listar(fortes, F.e), limparTitulo(vaga.titulo)));
   // Resultado citado: o tópico com número mais ligado à vaga.
   const resultado = [...experiencias, ...projetos]
     .flatMap((e) => e.itens || [])
@@ -385,7 +449,7 @@ export function personalizar(perfil, vaga, escolhas = {}) {
     .map((l, i) => ({ l, p: pontuar(l) - i * 0.01 }))
     .filter((x) => x.p > 0)
     .sort((a, b) => b.p - a.p)[0]?.l;
-  if (resultado) partes.push(`Entre os resultados: ${resultado.charAt(0).toLowerCase()}${resultado.slice(1).replace(/\.$/, "")}.`);
+  if (resultado) partes.push(F.resultado(`${resultado.charAt(0).toLowerCase()}${resultado.slice(1).replace(/\.$/, "")}`));
   const resumo = partes.join(" ");
 
   // Título com as 3 competências mais pedidas que você tem (ex.: "Analista de Dados | SQL · Power BI · Python").
@@ -405,7 +469,7 @@ export function personalizar(perfil, vaga, escolhas = {}) {
     projetos,
     formacao,
     // Para o painel "o que entra neste currículo" (+ / −).
-    secoes: { experiencias: exp.painel, projetos: proj.painel, formacao: form.painel },
+    secoes: { competencias: comp.painel, experiencias: exp.painel, projetos: proj.painel, formacao: form.painel },
     escolhas,
     compatibilidade: Math.max(0, Math.min(100, compatibilidade)),
     atendidos: listaAtendidos,
