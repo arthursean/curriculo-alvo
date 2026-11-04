@@ -327,3 +327,9 @@ export function paiEmComum(a, b) {
 }
 
 export const ehAmplo = (nome) => Boolean(porNome.get(nome)?.amplo);
+
+// Competências comportamentais: no currículo vão para "Soft skills", e não para "Hard skills".
+const SOFT = ["Liderança", "Comunicação", "Trabalho em equipe", "Resolução de problemas", "Pensamento analítico", "Organização", "Proatividade", "Negociação"];
+const tirarAcento = (s) => String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+const formasSoft = new Set(SOFT.flatMap((n) => porNome.get(n).formas.map(tirarAcento)).concat(SOFT.map(tirarAcento)));
+export const ehSoftSkill = (texto) => formasSoft.has(tirarAcento(texto));

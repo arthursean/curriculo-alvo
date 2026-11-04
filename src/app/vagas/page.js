@@ -28,6 +28,9 @@ function alternar(lista, valor) {
   return lista.includes(valor) ? lista.filter((v) => v !== valor) : [...lista, valor];
 }
 
+// Versão no nome da chave: buscas salvas por versões antigas (com regras de filtro antigas) são ignoradas.
+const CHAVE_BUSCA = "ca:busca:v2";
+
 const faixa = (p) => (p >= 70 ? "alta" : p >= 40 ? "media" : "baixa");
 
 async function carregar() {
@@ -120,7 +123,7 @@ export default function Vagas() {
 
   useEffect(() => {
     try {
-      const ultima = JSON.parse(sessionStorage.getItem("ca:busca") || "null");
+      const ultima = JSON.parse(sessionStorage.getItem(CHAVE_BUSCA) || "null");
       if (ultima) {
         setQ(ultima.q); setLocal(ultima.local); setDias(ultima.dias);
         setVagas(ultima.vagas); setFontes(ultima.fontes);
@@ -141,7 +144,7 @@ export default function Vagas() {
       setVagas(data.vagas);
       setFontes(data.fontes);
       try {
-        sessionStorage.setItem("ca:busca", JSON.stringify({ q, local, dias, vagas: data.vagas, fontes: data.fontes }));
+        sessionStorage.setItem(CHAVE_BUSCA, JSON.stringify({ q, local, dias, vagas: data.vagas, fontes: data.fontes }));
       } catch { /* cota cheia */ }
     } catch (err) {
       setErro(err.message);
@@ -315,7 +318,7 @@ export default function Vagas() {
 
           {aba === "busca" && vagas && !carregando && (
             <div className="row between small" style={{ marginBottom: 12 }}>
-              <strong>{filtradas.length} vaga(s)</strong>
+              <strong>{filtradas.length === vagas.length ? `${vagas.length} vaga(s)` : `${filtradas.length} de ${vagas.length} vagas (com os filtros)`}</strong>
               <div className="tags">
                 {fontes.map((f) => (
                   <span key={f.nome} className={`tag ${f.ok ? "ok" : "warn"}`} title={f.detalhe || ""}>

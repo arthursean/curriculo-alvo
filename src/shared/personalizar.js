@@ -185,7 +185,9 @@ function analisarPerfil(perfil) {
   return a;
 }
 
-export function personalizar(perfil, vaga) {
+// `escolhas` (opcional): o que o usuário incluiu (+) ou tirou (−) neste currículo, por seção e id:
+// { experiencias: { [id]: true|false }, projetos: {...}, formacao: {...} }.
+export function personalizar(perfil, vaga, escolhas = {}) {
   const { universo, porNome, doPerfil } = analisarPerfil(perfil);
   const { tem } = doPerfil;
   const exibir = (nome) => tem.get(nome)?.exibir || nome;
@@ -247,38 +249,54 @@ export function personalizar(perfil, vaga) {
     }
     return linha;
   };
-  const experiencias = perfil.experiencias
-    .map((e, ordem) => {
-      const itens = linhas(e.descricao)
-        .map((l, i) => ({ l, i, p: pontuar(l) + (/\d/.test(l) ? 1 : 0) }))
-        .sort((a, b) => b.p - a.p || a.i - b.i)
-        .map((x) => x.l);
-      const cargoParecido = normalizar(e.cargo).split(/\s+/).filter((w) => w.length > 3 && tituloVaga.includes(w)).length;
-      return { ...e, itens, _p: pontuar(`${e.cargo}\n${e.descricao}`) + cargoParecido * 3 + (e.atual ? 2 : 0), _o: ordem };
-    })
-    .sort((a, b) => b._p - a._p || a._o - b._o)
-    // Experiências sem relação com a vaga ficam mais curtas (até 2 tópicos) para dar espaço às relevantes.
-    .map(({ _p, _o, ...e }, i) => (_p <= 2 && i > 0 && e.itens.length > 2 ? { ...e, itens: e.itens.slice(0, 2) } : e))
-    .map((e) => ({ ...e, itens: e.itens.map(anotar) }));
+  const ordenarItens = (texto) => linhas(texto)
+    .map((l, i) => ({ l, i, p: pontuar(l) + (/\d/.test(l) ? 1 : 0) }))
+    .sort((a, b) => b.p - a.p || a.i - b.i)
+    .map((x) => x.l);
+  // Decide o que entra: a escolha do usuário para esta vaga (+ / −) manda; sem escolha, entra o que
+  // tem relação com a vaga. Devolve os itens incluídos e o resumo de cada um para o painel de escolhas.
+  const escolher = (lista, escolhasSecao = {}, { padrao, rotulo }) => {
+    const avaliados = lista.map((x, ordem) => ({ x, ordem, sugerida: padrao(x, ordem) }));
+    const painel = avaliados.map(({ x, sugerida }) => ({
+      id: x.id, rotulo: rotulo(x), sugerida, incluida: escolhasSecao[x.id] ?? sugerida, escolhaManual: x.id in escolhasSecao,
+    }));
+    const incluidos = avaliados.filter(({ x, sugerida }) => escolhasSecao[x.id] ?? sugerida);
+    return { incluidos, painel };
+  };
 
-  // Projetos (opcionais): mesma lógica; tecnologias contam bastante, e os sem relação com a vaga
-  // ficam no fim com até 2 tópicos.
-  const projetos = (perfil.projetos || [])
-    .filter((p) => p.nome?.trim() || p.descricao?.trim())
-    .map((p, ordem) => {
-      const itens = linhas(p.descricao)
-        .map((l, i) => ({ l, i, p: pontuar(l) + (/\d/.test(l) ? 1 : 0) }))
-        .sort((a, b) => b.p - a.p || a.i - b.i)
-        .map((x) => x.l);
-      return { ...p, itens, _p: pontuar(`${p.nome}\n${p.tecnologias}\n${p.descricao}`), _o: ordem };
-    })
+  // Experiências: as sem relação com a vaga ficam de fora (se nenhuma tiver, fica a mais recente).
+  const relevanciaExp = (e) => {
+    const cargoParecido = normalizar(e.cargo).split(/\s+/).filter((w) => w.length > 3 && tituloVaga.includes(w)).length;
+    return pontuar(`${e.cargo}\n${e.descricao}`) + cargoParecido * 3;
+  };
+  const algumaRelevante = perfil.experiencias.some((e) => relevanciaExp(e) > 0);
+  const recenteDoPerfil = maisRecente(perfil.experiencias);
+  const exp = escolher(perfil.experiencias, escolhas.experiencias, {
+    padrao: (e) => (algumaRelevante ? relevanciaExp(e) > 0 : e === recenteDoPerfil),
+    rotulo: (e) => [e.cargo, e.empresa].filter(Boolean).join(" · ") + (e.inicio ? ` (${e.inicio.slice(0, 4)}${e.atual ? "–atual" : e.fim ? `–${e.fim.slice(0, 4)}` : ""})` : ""),
+  });
+  const experiencias = exp.incluidos
+    .map(({ x: e, ordem }) => ({ ...e, itens: ordenarItens(e.descricao), _p: relevanciaExp(e) + (e.atual ? 2 : 0), _o: ordem }))
     .sort((a, b) => b._p - a._p || a._o - b._o)
-    .map(({ _p, _o, ...p }, i) => (_p <= 2 && i > 0 && p.itens.length > 2 ? { ...p, itens: p.itens.slice(0, 2) } : p))
-    .map((p) => ({ ...p, itens: p.itens.map(anotar) }));
+    .map(({ _p, _o, ...e }) => ({ ...e, itens: e.itens.map(anotar) }));
 
-  // Formação: a ordem dos cursos não muda (é cronológica), mas os tópicos da descrição
-  // vêm na ordem do que a vaga pede.
-  const formacao = perfil.formacao.map((f) => ({
+  // Projetos (opcionais): mesma regra — só os ligados à vaga, a não ser que você escolha outros.
+  const relevanciaProj = (p) => pontuar(`${p.nome}\n${p.tecnologias}\n${p.descricao}`);
+  const proj = escolher((perfil.projetos || []).filter((p) => p.nome?.trim() || p.descricao?.trim()), escolhas.projetos, {
+    padrao: (p) => relevanciaProj(p) > 0,
+    rotulo: (p) => p.nome || "Projeto sem nome",
+  });
+  const projetos = proj.incluidos
+    .map(({ x: p, ordem }) => ({ ...p, itens: ordenarItens(p.descricao), _p: relevanciaProj(p), _o: ordem }))
+    .sort((a, b) => b._p - a._p || a._o - b._o)
+    .map(({ _p, _o, ...p }) => ({ ...p, itens: p.itens.map(anotar) }));
+
+  // Formação: entra tudo por padrão (dá para tirar); a ordem dos cursos não muda, os tópicos sim.
+  const form = escolher(perfil.formacao, escolhas.formacao, {
+    padrao: () => true,
+    rotulo: (f) => [f.curso, f.instituicao].filter(Boolean).join(" · "),
+  });
+  const formacao = form.incluidos.map(({ x: f }) => ({
     ...f,
     itens: linhas(f.descricao)
       .map((l, i) => ({ l, i, p: pontuar(l) }))
@@ -333,7 +351,8 @@ export function personalizar(perfil, vaga) {
   if (diasDesde(vaga.publicadaEm) > 20) dicas.push("A vaga foi publicada há mais de 20 dias: confirme se ainda está aberta antes de se candidatar.");
 
   // ---- Resumo, montado com fatos do perfil --------------------------------------------
-  const recente = maisRecente(perfil.experiencias);
+  // O resumo cita só experiências que estão neste currículo.
+  const recente = maisRecente(experiencias.length ? experiencias : perfil.experiencias);
   const partes = [];
   if (perfil.resumo?.trim()) {
     partes.push(perfil.resumo.trim().replace(/([^.!?])$/, "$1."));
@@ -385,6 +404,9 @@ export function personalizar(perfil, vaga) {
     experiencias,
     projetos,
     formacao,
+    // Para o painel "o que entra neste currículo" (+ / −).
+    secoes: { experiencias: exp.painel, projetos: proj.painel, formacao: form.painel },
+    escolhas,
     compatibilidade: Math.max(0, Math.min(100, compatibilidade)),
     atendidos: listaAtendidos,
     relacionados: parecidos.map((t) => `${t.nome} (você tem ${exibir(t.via)})`),

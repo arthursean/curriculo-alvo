@@ -91,6 +91,15 @@ export default function Perfil() {
         <h2>Competências</h2>
         <p className="muted small" style={{ margin: 0 }}>Ferramentas, tecnologias e habilidades. Separe por vírgula ou tecle Enter.</p>
         <TagInput valores={perfil.competencias} onChange={(v) => setPerfil((p) => ({ ...p, competencias: v }))} placeholder="Ex.: Excel, Power BI, SQL, Negociação" />
+        <Campo rotulo="Soft skills (opcional)">
+          <textarea
+            value={perfil.softSkills || ""}
+            onChange={set("softSkills")}
+            placeholder="Perfil proativo, responsável com prazos e bom em trabalho em equipe. Aprendo novas tecnologias com facilidade."
+            style={{ minHeight: 72 }}
+          />
+        </Campo>
+        <p className="muted small" style={{ margin: 0 }}>No currículo, as competências técnicas aparecem em “Hard skills” e este texto em “Soft skills”. Sem texto, as competências comportamentais da lista (ex.: Liderança) vão para lá.</p>
       </section>
 
       <section className="card stack">

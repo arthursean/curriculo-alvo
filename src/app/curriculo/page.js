@@ -6,6 +6,7 @@ import CurriculoEditavel from "@/frontend/components/CurriculoEditavel";
 import { carregarPerfil, salvarPerfil } from "@/frontend/lib/api";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 import { perfilCompleto } from "@/shared/perfil";
+import { estavel } from "@/shared/texto";
 
 export default function CurriculoBase() {
   const { dados, erro: erroCarga } = useProtegido(carregarPerfil);
@@ -16,7 +17,12 @@ export default function CurriculoBase() {
   if (erroCarga) return <div className="alerta">{erroCarga}</div>;
   if (!perfil) return <div className="vazio">Carregando…</div>;
 
-  // A edição manual do currículo base fica guardada junto do perfil.
+  // A formatação vale só para o conteúdo em que foi feita: mudou o perfil, ela é ignorada.
+  const { edicaoBase, ...conteudo } = perfil;
+  const assinatura = estavel(conteudo);
+  const htmlSalvo = edicaoBase?.assinatura === assinatura ? edicaoBase.html : null;
+
+  // A formatação do currículo base fica guardada junto do perfil.
   async function guardarEdicao(edicaoBase) {
     const novo = { ...perfil, edicaoBase };
     setPerfil(novo);
@@ -44,8 +50,8 @@ export default function CurriculoBase() {
       )}
       {erro && <div className="alerta nao-imprimir">{erro}</div>}
       <CurriculoEditavel
-        htmlSalvo={perfil.edicaoBase?.html || null}
-        onSalvar={(html) => guardarEdicao({ html, em: new Date().toISOString() })}
+        htmlSalvo={htmlSalvo}
+        onSalvar={(html) => guardarEdicao({ html, assinatura, em: new Date().toISOString() })}
         onDescartar={() => guardarEdicao(null)}
       >
         <Curriculo perfil={perfil} />

@@ -28,6 +28,13 @@ export function contem(texto, termo) {
   return new RegExp(`(^|[^a-z0-9.])${t}(?![a-z0-9]|\\.[a-z0-9])`).test(normalizar(texto));
 }
 
+// JSON com as chaves em ordem: o banco (JSONB) devolve os objetos com as chaves reordenadas,
+// então uma comparação com JSON.stringify comum acharia diferença onde não há.
+export function estavel(valor) {
+  return JSON.stringify(valor ?? null, (_, v) =>
+    v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]])) : v);
+}
+
 export function diasDesde(data) {
   const ms = Date.now() - new Date(data).getTime();
   return Math.max(0, Math.floor(ms / 86400000));

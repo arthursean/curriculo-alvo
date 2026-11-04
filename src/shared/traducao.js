@@ -29,32 +29,37 @@ function rotulos(id, t) {
 
 export const ROTULOS = {
   pt: rotulos("pt", {
-    seuNome: "Seu nome", resumo: "Resumo profissional", competencias: "Competências", experiencia: "Experiência profissional", projetos: "Projetos",
+    seuNome: "Seu nome", resumo: "Resumo profissional", competencias: "Competências", experiencia: "Experiência", projetos: "Projetos",
     formacao: "Formação acadêmica", idiomasCert: "Idiomas e certificações", atual: "atual",
+    atualmente: "Atualmente", hardSkills: "Hard skills", softSkills: "Soft skills", certificacoes: "Certificações",
     status: { "Em andamento": "Em andamento", "Trancado": "Trancado" },
     nivel: {},
   }),
   en: rotulos("en", {
-    seuNome: "Your name", resumo: "Professional summary", competencias: "Skills", experiencia: "Professional experience", projetos: "Projects",
+    seuNome: "Your name", resumo: "Professional summary", competencias: "Skills", experiencia: "Experience", projetos: "Projects",
     formacao: "Education", idiomasCert: "Languages and certifications", atual: "present",
+    atualmente: "Present", hardSkills: "Hard skills", softSkills: "Soft skills", certificacoes: "Certifications",
     status: { "Em andamento": "In progress", "Trancado": "On hold" },
     nivel: { "Básico": "Basic", "Intermediário": "Intermediate", "Avançado": "Advanced", "Fluente": "Fluent", "Nativo": "Native" },
   }),
   es: rotulos("es", {
-    seuNome: "Su nombre", resumo: "Resumen profesional", competencias: "Competencias", experiencia: "Experiencia profesional", projetos: "Proyectos",
+    seuNome: "Su nombre", resumo: "Resumen profesional", competencias: "Competencias", experiencia: "Experiencia", projetos: "Proyectos",
     formacao: "Formación académica", idiomasCert: "Idiomas y certificaciones", atual: "actual",
+    atualmente: "Actualidad", hardSkills: "Hard skills", softSkills: "Soft skills", certificacoes: "Certificaciones",
     status: { "Em andamento": "En curso", "Trancado": "Interrumpido" },
     nivel: { "Básico": "Básico", "Intermediário": "Intermedio", "Avançado": "Avanzado", "Fluente": "Fluido", "Nativo": "Nativo" },
   }),
   fr: rotulos("fr", {
-    seuNome: "Votre nom", resumo: "Profil professionnel", competencias: "Compétences", experiencia: "Expérience professionnelle", projetos: "Projets",
+    seuNome: "Votre nom", resumo: "Profil professionnel", competencias: "Compétences", experiencia: "Expérience", projetos: "Projets",
     formacao: "Formation", idiomasCert: "Langues et certifications", atual: "aujourd’hui",
+    atualmente: "Aujourd’hui", hardSkills: "Hard skills", softSkills: "Soft skills", certificacoes: "Certifications",
     status: { "Em andamento": "En cours", "Trancado": "Interrompu" },
     nivel: { "Básico": "Notions", "Intermediário": "Intermédiaire", "Avançado": "Avancé", "Fluente": "Courant", "Nativo": "Langue maternelle" },
   }),
   de: rotulos("de", {
-    seuNome: "Ihr Name", resumo: "Profil", competencias: "Kenntnisse", experiencia: "Berufserfahrung", projetos: "Projekte",
+    seuNome: "Ihr Name", resumo: "Profil", competencias: "Kenntnisse", experiencia: "Erfahrung", projetos: "Projekte",
     formacao: "Ausbildung", idiomasCert: "Sprachen und Zertifikate", atual: "heute",
+    atualmente: "Heute", hardSkills: "Hard Skills", softSkills: "Soft Skills", certificacoes: "Zertifikate",
     status: { "Em andamento": "Laufend", "Trancado": "Unterbrochen" },
     nivel: { "Básico": "Grundkenntnisse", "Intermediário": "Gute Kenntnisse", "Avançado": "Sehr gute Kenntnisse", "Fluente": "Fließend", "Nativo": "Muttersprache" },
   }),

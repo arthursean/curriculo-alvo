@@ -24,12 +24,13 @@ export async function buscarVagas({ q, local, dias, modalidades = [], niveis = [
     const { nome } = FONTES[i];
     if (r.status === "rejected") fontes.push({ nome, ok: false, detalhe: String(r.reason?.message || r.reason) });
     else if (r.value !== null) { // null = fonte opcional sem chave configurada
-      fontes.push({ nome, ok: true, total: r.value.length });
+      fontes.push({ nome, ok: true });
       vagas.push(...r.value);
     }
   });
 
-  vagas = vagas.map(montarVaga);
+  // A mesma vaga pode vir repetida (ex.: duas páginas da mesma fonte): fica uma só.
+  vagas = [...new Map(vagas.map((v) => [v.id, v])).values()].map(montarVaga);
   // Público brasileiro: vaga de fora do país só aparece se for remota.
   vagas = vagas.filter((v) => !v.internacional || v.modalidade === "remoto");
   if (local) vagas = vagas.filter((v) => v.fonte === adzuna.nome || v.modalidade === "remoto" || contem(v.local, local));
@@ -38,6 +39,9 @@ export async function buscarVagas({ q, local, dias, modalidades = [], niveis = [
   if (niveis.length) vagas = vagas.filter((v) => niveis.includes(v.nivel));
   if (areas.length) vagas = vagas.filter((v) => areas.includes(v.area));
   vagas.sort((a, b) => new Date(b.publicadaEm) - new Date(a.publicadaEm));
+  vagas = vagas.slice(0, 200);
 
-  return { vagas: vagas.slice(0, 200), fontes };
+  // O total de cada fonte é contado no fim, depois de todos os filtros: assim a soma bate com a lista.
+  for (const f of fontes) if (f.ok) f.total = vagas.filter((v) => v.fonte === f.nome).length;
+  return { vagas, fontes };
 }

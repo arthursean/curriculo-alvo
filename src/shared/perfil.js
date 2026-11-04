@@ -9,6 +9,7 @@ export const perfilVazio = {
   site: "",
   resumo: "",
   competencias: [],
+  softSkills: "", // texto livre para a seção "Soft skills" do currículo (opcional)
   experiencias: [],
   projetos: [], // opcional: { id, nome, link, inicio, fim, tecnologias, descricao }
   formacao: [],

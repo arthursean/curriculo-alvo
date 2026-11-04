@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Curriculo from "@/frontend/components/Curriculo";
 import CurriculoEditavel from "@/frontend/components/CurriculoEditavel";
+import PainelConteudo from "@/frontend/components/PainelConteudo";
 import { personalizar } from "@/shared/personalizar";
 import { detectarIdioma, IDIOMAS_CV } from "@/shared/traducao";
 import { traduzirCurriculo } from "@/frontend/lib/tradutor";
@@ -11,14 +12,16 @@ import { carregarCurriculos, carregarPerfil, salvarCurriculo } from "@/frontend/
 import { lerVagaAtual } from "@/frontend/lib/navegacao";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 import { perfilCompleto } from "@/shared/perfil";
+import { estavel } from "@/shared/texto";
 
 const NOME_IDIOMA = Object.fromEntries(IDIOMAS_CV.map((i) => [i.id, i.nome]));
 
-// JSON com as chaves em ordem: o banco (JSONB) devolve os objetos com as chaves reordenadas,
-// então uma comparação com JSON.stringify comum acharia diferença onde não há.
-function estavel(valor) {
-  return JSON.stringify(valor ?? null, (_, v) =>
-    v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]])) : v);
+// "Impressão digital" do conteúdo exibido: a formatação salva só vale para exatamente este conteúdo.
+// Mudou o perfil, os itens incluídos ou o idioma? A formatação antiga é ignorada.
+function assinatura({ perfil, ajuste, idioma }) {
+  const { nome, telefone, email, linkedin, site, cidade, idiomas, certificacoes, softSkills } = perfil;
+  const { resumo, competencias, experiencias, projetos, formacao } = ajuste;
+  return estavel({ idioma, nome, telefone, email, linkedin, site, cidade, idiomas, certificacoes, softSkills, resumo, competencias, experiencias, projetos, formacao });
 }
 
 async function carregar() {
@@ -37,8 +40,10 @@ function Personalizar() {
   const [traduzindo, setTraduzindo] = useState("");
   const [erro, setErro] = useState("");
   const [salvo, setSalvo] = useState(false);
-  // Versão editada à mão: { html, idioma, em }
+  // Formatação feita por você: { html, idioma, assinatura, em }
   const [edicao, setEdicao] = useState(null);
+  // Suas escolhas de + / − para esta vaga: { experiencias: { id: true|false }, ... }
+  const [escolhas, setEscolhas] = useState({});
 
   function salvar(v, aj, tr, ed) {
     setSalvo(false);
@@ -57,8 +62,10 @@ function Personalizar() {
     const idiomaVaga = v.idioma || detectarIdioma(`${v.titulo}\n${v.descricao}`);
     setIdiomaAlvo(existente?.ajuste?.traducao?.idioma || idiomaVaga);
     if (!perfilCompleto(dados.perfil)) return;
-    // Sempre recalcula a partir do perfil atual: se você editou o perfil, o currículo acompanha.
-    const novo = personalizar(dados.perfil, v);
+    // Sempre recalcula a partir do perfil atual (e das suas escolhas de + / − para esta vaga).
+    const esc = existente?.ajuste?.escolhas || {};
+    setEscolhas(esc);
+    const novo = personalizar(dados.perfil, v, esc);
     setAjuste(novo);
     const tr = existente?.ajuste?.traducao;
     const perfilMudou = estavel(existente?.ajuste?.resumo) !== estavel(novo.resumo) ||
@@ -68,7 +75,7 @@ function Personalizar() {
     // A tradução salva só vale se o perfil não mudou desde então.
     const trValida = tr && !perfilMudou ? tr : null;
     setTraducao(trValida);
-    // A edição manual é do usuário: é mantida mesmo que o perfil mude (ele pode descartar).
+    // A formatação fica guardada; se o conteúdo mudou, a assinatura não bate e ela é ignorada na tela.
     const ed = existente?.ajuste?.edicao || null;
     setEdicao(ed);
     // Só grava no banco quando é um currículo novo ou quando o perfil mudou desde a última vez:
@@ -77,6 +84,25 @@ function Personalizar() {
     else setSalvo(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dados, vagaId]);
+
+  // + / − de um item só nesta vaga. Voltar ao que o algoritmo sugere remove a escolha manual.
+  function aplicarEscolhas(nova) {
+    const novo = personalizar(dados.perfil, vaga, nova);
+    setEscolhas(nova);
+    setAjuste(novo);
+    // O conteúdo mudou: tradução e formatação antigas não valem mais.
+    setTraducao(null);
+    setEdicao(null);
+    salvar(vaga, novo, null, null);
+  }
+
+  function alternar(secao, id, incluir) {
+    const item = ajuste.secoes[secao].find((i) => i.id === id);
+    const daSecao = { ...(escolhas[secao] || {}) };
+    if (incluir === item.sugerida) delete daSecao[id];
+    else daSecao[id] = incluir;
+    aplicarEscolhas({ ...escolhas, [secao]: daSecao });
+  }
 
   async function traduzir() {
     setErro("");
@@ -154,7 +180,7 @@ function Personalizar() {
               <div className="row between small"><strong>Compatibilidade estimada</strong><span>{ajuste.compatibilidade}%</span></div>
               <div className="barra" style={{ marginTop: 6 }}><div style={{ width: `${ajuste.compatibilidade}%` }} /></div>
               <p className="muted small" style={{ marginTop: 8 }}>
-                Título, resumo, competências e tópicos ajustados ao que a vaga pede, considerando a relação entre skills (ex.: PostgreSQL atende SQL). Palavras-chave em negrito. Recalculado sempre que você abre a vaga. {salvo && "Salvo na sua conta."}
+                Resumo, competências, experiências e tópicos ajustados ao que a vaga pede, considerando a relação entre skills (ex.: PostgreSQL atende SQL). Experiências sem relação com a vaga ficam de fora. {salvo && "Salvo na sua conta."}
               </p>
               {ajuste.atendidos?.length > 0 && (
                 <>
@@ -188,12 +214,20 @@ function Personalizar() {
       </div>
 
       {ajuste && (
+        <PainelConteudo
+          secoes={ajuste.secoes}
+          onAlternar={alternar}
+          onRestaurar={() => aplicarEscolhas({})}
+        />
+      )}
+
+      {ajuste && (
         <CurriculoEditavel
-          key={exibido.idioma}
-          // Cada idioma tem a sua edição: a feita em português não aparece na versão em inglês.
-          htmlSalvo={edicao?.idioma === exibido.idioma ? edicao.html : null}
+          key={`${exibido.idioma}-${assinatura(exibido)}`}
+          // A formatação vale só para o mesmo conteúdo e idioma em que foi feita.
+          htmlSalvo={edicao?.idioma === exibido.idioma && edicao?.assinatura === assinatura(exibido) ? edicao.html : null}
           onSalvar={(html) => {
-            const ed = { html, idioma: exibido.idioma, em: new Date().toISOString() };
+            const ed = { html, idioma: exibido.idioma, assinatura: assinatura(exibido), em: new Date().toISOString() };
             setEdicao(ed);
             return salvar(vaga, ajuste, traducao, ed);
           }}

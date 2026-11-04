@@ -91,6 +91,7 @@ export async function traduzirCurriculo(perfil, ajuste, para, aoProgresso) {
   perfil.formacao.forEach((f) => add(f.curso));
   (ajuste.formacao || []).forEach((f) => f.itens?.forEach(add));
   perfil.idiomas.forEach((i) => { if (!NOMES[i.idioma]) add(i.idioma); });
+  add(perfil.softSkills);
 
   const lista = [...textos];
   const mapa = new Map();
@@ -106,6 +107,7 @@ export async function traduzirCurriculo(perfil, ajuste, para, aoProgresso) {
       ...perfil,
       formacao: perfil.formacao.map((f) => ({ ...f, curso: tr(f.curso) })),
       idiomas: perfil.idiomas.map((i) => ({ ...i, idioma: NOMES[i.idioma] ? i.idioma : tr(i.idioma) })),
+      softSkills: tr(perfil.softSkills),
     },
     ajuste: {
       ...ajuste,
