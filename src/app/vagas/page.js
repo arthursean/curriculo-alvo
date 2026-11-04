@@ -420,10 +420,19 @@ export default function Vagas() {
                     <div className="row">
                       <button className="btn sm" onClick={() => gerar(v)} disabled={!perfilOk}>{geradas.has(v.id) ? "Ver currículo" : "Gerar currículo para esta vaga"}</button>
                       <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer">Ver vaga original ↗</a>
+                      <button className="btn ghost sm" onClick={() => setAberta(null)}>Recolher ▲</button>
                     </div>
                   </div>
                 ) : (
-                  <p className="desc">{v.descricao}</p>
+                  <>
+                    {v.descricao && <p className="desc">{v.descricao}</p>}
+                    <div className="row" style={{ marginTop: v.descricao ? 0 : 10 }}>
+                      <button className="btn sec sm" onClick={() => setAberta(v.id)}>
+                        {perfilOk ? "Ver compatibilidade e descrição ▼" : "Ver descrição completa ▼"}
+                      </button>
+                      <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer">Ver vaga original ↗</a>
+                    </div>
+                  </>
                 )}
               </article>
             );
