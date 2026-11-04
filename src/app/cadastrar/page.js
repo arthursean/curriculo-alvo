@@ -5,9 +5,13 @@ import { useSearchParams } from "next/navigation";
 import FormConta from "@/frontend/components/FormConta";
 import { cadastrar } from "@/frontend/lib/api";
 import { destinoSeguro } from "@/frontend/lib/navegacao";
+import { useSaiSeLogado } from "@/frontend/hooks/useSaiSeLogado";
 
 function Cadastrar() {
-  const voltar = destinoSeguro(useSearchParams().get("voltar"));
+  const param = useSearchParams().get("voltar");
+  // Conta nova vai primeiro preencher o perfil; quem já está logado vai para as vagas.
+  const voltar = destinoSeguro(param, "/perfil");
+  if (useSaiSeLogado(destinoSeguro(param))) return null;
   return (
     <FormConta
       titulo="Criar conta"

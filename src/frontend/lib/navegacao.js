@@ -1,4 +1,5 @@
 "use client";
+import { PAGINA_INICIAL_LOGADO } from "@/shared/sessao";
 
 // A vaga escolhida passa da busca para a página de personalização pela aba atual.
 export function guardarVagaAtual(vaga) {
@@ -16,6 +17,7 @@ export function lerVagaAtual() {
 }
 
 // Só aceita caminhos internos no "voltar" para não virar redirecionamento aberto.
-export function destinoSeguro(voltar) {
-  return voltar && voltar.startsWith("/") && !voltar.startsWith("//") ? voltar : "/perfil";
+// Sem "voltar", quem entra vai para as vagas.
+export function destinoSeguro(voltar, padrao = PAGINA_INICIAL_LOGADO) {
+  return voltar && voltar.startsWith("/") && !voltar.startsWith("//") ? voltar : padrao;
 }

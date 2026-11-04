@@ -5,9 +5,12 @@ import { useSearchParams } from "next/navigation";
 import FormConta from "@/frontend/components/FormConta";
 import { entrar } from "@/frontend/lib/api";
 import { destinoSeguro } from "@/frontend/lib/navegacao";
+import { useSaiSeLogado } from "@/frontend/hooks/useSaiSeLogado";
 
 function Entrar() {
   const voltar = destinoSeguro(useSearchParams().get("voltar"));
+  // Já logado? Vai direto para as vagas (ou para a página de onde veio).
+  if (useSaiSeLogado(voltar)) return null;
   return (
     <FormConta
       titulo="Entrar"

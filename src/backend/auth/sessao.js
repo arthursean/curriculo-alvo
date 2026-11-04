@@ -2,8 +2,9 @@ import "server-only";
 import { cookies } from "next/headers";
 import * as sessoes from "@/backend/repositorios/sessoes";
 import { gerarToken, hashToken } from "./seguranca";
+import { COOKIE_SESSAO } from "@/shared/sessao";
 
-const COOKIE = "ca_sessao";
+const COOKIE = COOKIE_SESSAO;
 const DURACAO_DIAS = 30;
 
 // Cria a sessão no banco e grava o cookie (HttpOnly: o JavaScript da página não consegue ler).

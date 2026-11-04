@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { COOKIE_SESSAO, PAGINA_INICIAL_LOGADO } from "@/shared/sessao";
 
 const PASSOS = [
   ["Crie seu perfil", "Competências, experiências, formação, idiomas e certificações, salvos com segurança na sua conta."],
@@ -6,7 +9,11 @@ const PASSOS = [
   ["Gere o currículo da vaga", "Para cada vaga escolhida, um currículo reorganizado pelo que ela pede, com compatibilidade e dicas, pronto para PDF."],
 ];
 
-export default function Inicio() {
+export default async function Inicio() {
+  // Quem já está logado vai direto para as vagas (decidido no servidor, sem piscar esta tela).
+  // Basta o cookie existir: se a sessão tiver expirado, a página de vagas manda para o login.
+  if ((await cookies()).get(COOKIE_SESSAO)?.value) redirect(PAGINA_INICIAL_LOGADO);
+
   return (
     <>
       <section className="hero">
