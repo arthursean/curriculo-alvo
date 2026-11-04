@@ -1,5 +1,16 @@
 "use client";
 import { NOMES, detectarIdiomaPerfil } from "@/shared/traducao";
+import { MARCA_TOPICO, ehTopico, montarInline, partesInline, tirarTopico } from "@/shared/formatacao";
+
+// Tópico do currículo: vai para o tradutor só o texto (sem marcas). O marcador de tópico volta
+// sempre; o estilo volta quando a linha inteira tem um só (ex.: toda em negrito).
+function separarItem(item) {
+  const topico = ehTopico(item);
+  const partes = partesInline(topico ? tirarTopico(item) : item);
+  const texto = partes.map((p) => p.t).join("");
+  const unico = partes.length && partes.every((p) => p.b === partes[0].b && p.i === partes[0].i && p.u === partes[0].u) ? partes[0] : null;
+  return { topico, texto, remontar: (t) => (topico ? MARCA_TOPICO : "") + (unico ? montarInline([{ ...unico, t }]) : montarInline([{ t }])) };
+}
 
 // ---- Tradução sem custo -------------------------------------------------------------
 // 1º: tradutor embutido do navegador (Chrome 138+): roda no aparelho, nada sai do computador.
@@ -87,10 +98,11 @@ export async function traduzirCurriculo(perfil, ajuste, para, aoProgresso, de = 
   const add = (t) => t && String(t).trim() && textos.add(String(t));
   add(ajuste.titulo); add(ajuste.resumo);
   ajuste.competencias.filter(traduzivel).forEach(add);
-  ajuste.experiencias.forEach((e) => { add(e.cargo); e.itens?.forEach(add); });
-  (ajuste.projetos || []).forEach((p) => p.itens?.forEach(add)); // nome do projeto não se traduz
+  const addItem = (it) => add(separarItem(it).texto);
+  ajuste.experiencias.forEach((e) => { add(e.cargo); e.itens?.forEach(addItem); });
+  (ajuste.projetos || []).forEach((p) => p.itens?.forEach(addItem)); // nome do projeto não se traduz
   perfil.formacao.forEach((f) => add(f.curso));
-  (ajuste.formacao || []).forEach((f) => f.itens?.forEach(add));
+  (ajuste.formacao || []).forEach((f) => f.itens?.forEach(addItem));
   perfil.idiomas.forEach((i) => { if (!NOMES[i.idioma]) add(i.idioma); });
   add(perfil.softSkills);
 
@@ -101,6 +113,10 @@ export async function traduzirCurriculo(perfil, ajuste, para, aoProgresso, de = 
     mapa.set(lista[i], limpar(lista[i], await motor.traduzir(lista[i])));
   }
   const tr = (t) => (t ? mapa.get(String(t)) ?? t : t);
+  const trItem = (it) => {
+    const { texto, remontar } = separarItem(it);
+    return texto.trim() ? remontar(tr(texto)) : it;
+  };
 
   return {
     motor: motor.nome,
@@ -116,9 +132,9 @@ export async function traduzirCurriculo(perfil, ajuste, para, aoProgresso, de = 
       resumo: tr(ajuste.resumo),
       competencias: ajuste.competencias.map(tr),
       destaques: ajuste.destaques.map(tr),
-      experiencias: ajuste.experiencias.map((e) => ({ ...e, cargo: tr(e.cargo), itens: e.itens?.map(tr) })),
-      projetos: (ajuste.projetos || []).map((p) => ({ ...p, itens: p.itens?.map(tr) })),
-      formacao: (ajuste.formacao || perfil.formacao).map((f) => ({ ...f, curso: tr(f.curso), itens: f.itens?.map(tr) })),
+      experiencias: ajuste.experiencias.map((e) => ({ ...e, cargo: tr(e.cargo), itens: e.itens?.map(trItem) })),
+      projetos: (ajuste.projetos || []).map((p) => ({ ...p, itens: p.itens?.map(trItem) })),
+      formacao: (ajuste.formacao || perfil.formacao).map((f) => ({ ...f, curso: tr(f.curso), itens: f.itens?.map(trItem) })),
       palavras: [...new Set([...ajuste.palavras, ...ajuste.destaques.map(tr)])],
     },
   };

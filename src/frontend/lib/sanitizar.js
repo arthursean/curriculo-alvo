@@ -6,7 +6,7 @@
 const TAGS = new Set(["ARTICLE", "HEADER", "SECTION", "DIV", "SPAN", "P", "H1", "H2", "H3", "UL", "OL", "LI", "STRONG", "B", "EM", "I", "U", "BR", "HR", "A"]);
 const CLASSES = new Set([
   "cv", "cv-contato", "cv-resumo", "cv-item", "cv-item-titulo", "cv-item-sub", "cv-item-texto", "cv-hard", "cv-soft",
-  "cv-topo", "cv-corpo", "cv-principal", "cv-lateral", "cv-sep",
+  "cv-topo", "cv-corpo", "cv-principal", "cv-lateral", "cv-sep", "cv-linha", "cv-topico",
   // layout antigo (currículos formatados antes da mudança de modelo)
   "cargo", "contato", "exp", "exp-topo", "periodo", "skills", "skill", "destaque",
 ]);

@@ -3,6 +3,7 @@
 import { normalizar } from "./texto";
 import { novoId } from "./perfil";
 import { IDIOMAS } from "./idiomas";
+import { MARCA_TOPICO, escaparMarcas } from "./formatacao";
 
 // Títulos de seção mais comuns (PT/EN/ES), já sem acento.
 const SECOES = [
@@ -52,7 +53,17 @@ function juntarQuebras(linhas) {
   }
   return out;
 }
-const descricaoDe = (linhas) => juntarQuebras(linhas).map(limparTopico).filter(Boolean).join("\n");
+// Linhas com marcador no arquivo viram tópicos no perfil; o resto do texto é escapado para
+// um "*" solto não virar itálico.
+const descricaoDe = (linhas) =>
+  juntarQuebras(linhas)
+    .map((l) => {
+      const texto = limparTopico(l);
+      if (!texto) return "";
+      return (/^\s*[•▪◦●○■□➢➤►\-–—*]/.test(l) ? MARCA_TOPICO : "") + escaparMarcas(texto);
+    })
+    .filter(Boolean)
+    .join("\n");
 
 // Divide o bloco de uma seção em itens: um item começa numa linha com período (datas).
 // A linha anterior, se for curta e sem data, é o título do item (ex.: "Analista de Dados" / "Banco X").

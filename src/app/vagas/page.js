@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AREAS, MODALIDADES, NIVEIS } from "@/shared/vagas";
+import { AREAS, MODALIDADES, NIVEIS, areasDaVaga } from "@/shared/vagas";
 import { tempoRelativo } from "@/shared/texto";
 import { IDIOMAS_CV } from "@/shared/traducao";
 import { personalizar } from "@/shared/personalizar";
@@ -228,7 +228,7 @@ export default function Vagas() {
   const passa = (v, ignorar) =>
     (ignorar === "modalidade" || !modalidades.length || modalidades.includes(v.modalidade)) &&
     (ignorar === "nivel" || !niveis.length || niveis.includes(v.nivel)) &&
-    (ignorar === "area" || !areas.length || areas.includes(v.area)) &&
+    (ignorar === "area" || !areas.length || areasDaVaga(v).some((a) => areas.includes(a))) &&
     (ignorar === "salario" || filtroSalario(v));
 
   const filtradas = useMemo(() => {
@@ -240,7 +240,8 @@ export default function Vagas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, modalidades, niveis, areas, filtroSalario, ordem, avaliacoes]);
 
-  const contagem = (campo, id) => base.filter((v) => passa(v, campo) && v[campo] === id).length;
+  const contagem = (campo, id) =>
+    base.filter((v) => passa(v, campo) && (campo === "area" ? areasDaVaga(v).includes(id) : v[campo] === id)).length;
   const comSalario = base.filter((v) => passa(v, "salario") && v.salarioMin != null).length;
   const algumFiltro = modalidades.length || niveis.length || areas.length || salMin || salMax || !semSalario;
   const perfilOk = perfil && perfilCompleto(perfil);
@@ -404,7 +405,7 @@ export default function Vagas() {
                 <div className="tags" style={{ marginTop: 8 }}>
                   <span className="tag pri">{MOD_NOME[v.modalidade]}</span>
                   <span className="tag">{NIVEL_NOME[v.nivel]}</span>
-                  <span className="tag">{AREA_NOME[v.area]}</span>
+                  {areasDaVaga(v).map((a) => <span key={a} className="tag">{AREA_NOME[a]}</span>)}
                   {v.idioma && v.idioma !== "pt" && <span className="tag warn">Vaga em {IDIOMA_NOME[v.idioma]?.toLowerCase()}</span>}
                   {v.salario && <span className="tag ok">{v.salario}</span>}
                   {geradas.has(v.id) && <span className="tag ok">Currículo gerado</span>}

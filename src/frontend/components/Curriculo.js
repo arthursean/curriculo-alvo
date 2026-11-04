@@ -1,5 +1,7 @@
 import { ROTULOS } from "@/shared/traducao";
 import { ehSoftSkill } from "@/shared/skills";
+import { ehTopico, partesInline, tirarTopico } from "@/shared/formatacao";
+import { Fragment } from "react";
 
 // Visual do currículo: segue o modelo de referência (A4, Arial, nome centralizado em verde-petróleo,
 // linha fina, contatos com links azuis, títulos de seção em Verdana negrito e cada experiência como
@@ -19,17 +21,29 @@ function periodo(inicio, fim, atual, r) {
 
 function itensDe(item) {
   if (item.itens?.length) return item.itens;
-  return String(item.descricao || "").split("\n").map((l) => l.replace(/^[-*•\s]+/, "").trim()).filter(Boolean);
+  return String(item.descricao || "").split("\n").map((l) => l.trim()).filter(Boolean);
 }
 
-// Cada tópico da descrição (uma linha no perfil) fica numa linha própria no currículo.
+// Negrito, itálico e sublinhado marcados no perfil (veja shared/formatacao.js).
+function Inline({ texto }) {
+  return partesInline(texto).map((p, i) => {
+    let n = p.t;
+    if (p.u) n = <u>{n}</u>;
+    if (p.i) n = <em>{n}</em>;
+    if (p.b) n = <strong>{n}</strong>;
+    return <Fragment key={i}>{n}</Fragment>;
+  });
+}
+
+// Cada linha da descrição fica num bloco próprio; as marcadas como tópico ganham o marcador.
 function Linhas({ itens }) {
-  return itens.map((t, i) => (
-    <span key={i}>
-      {i > 0 && <br />}
-      {t}
-    </span>
-  ));
+  return itens.map((t, i) =>
+    ehTopico(t) ? (
+      <span key={i} className="cv-topico"><Inline texto={tirarTopico(t)} /></span>
+    ) : (
+      <span key={i} className="cv-linha"><Inline texto={t} /></span>
+    )
+  );
 }
 
 const linha = (...partes) => partes.filter(Boolean).join(" | ");

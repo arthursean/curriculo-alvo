@@ -84,19 +84,38 @@ export function classificarModalidade({ remoto, titulo = "", local = "", descric
   return "presencial";
 }
 
-export function classificarArea(...textos) {
-  const t = ` ${normalizar(textos.join(" "))} `;
-  let melhor = null;
-  let pontos = 0;
-  for (const a of AREAS) {
-    const p = a.termos.reduce((s, termo) => s + (t.includes(termo) ? 1 : 0), 0);
-    if (p > pontos) {
-      melhor = a.id;
-      pontos = p;
-    }
-  }
-  return melhor || "outros";
+// Cargos compostos que as palavras soltas classificam errado ("Engenheiro de Dados" não é
+// Engenharia/Indústria). Testados no título antes da contagem.
+const ENG = String.raw`(?:engenh\w*|engineer)(?:\s*\([ao]\))?\s+(?:de\s+|da\s+|of\s+)?`;
+const CARGOS_COMPOSTOS = [
+  [new RegExp(`${ENG}(?:dados|data|analytics|machine learning|ml|ia|ai|inteligencia artificial)\\b`), ["dados", "tecnologia"]],
+  [/\b(?:data|analytics|ml|ai|machine learning|big data)\s+engineer/, ["dados", "tecnologia"]],
+  [/\b(?:cientista|analista|arquiteto|arquiteta) (?:\([ao]\) )?de dados|data (?:scientist|analyst|architect)|analista de bi\b|\bbi analyst/, ["dados"]],
+  [new RegExp(`${ENG}(?:software|computacao|sistemas|devops|cloud|plataforma|confiabilidade|seguranca|front-?end|back-?end|full ?stack|qa|testes|redes)\\b`), ["tecnologia"]],
+  [/\b(?:software|devops|cloud|platform|site reliability|back-?end|front-?end|full ?stack|qa|security|mobile)\s+engineer/, ["tecnologia"]],
+];
+
+// Áreas da vaga, da principal para a secundária (no máximo 2). O título pesa mais que a
+// categoria, que pesa mais que o começo da descrição.
+export function classificarAreas(titulo = "", categoria = "", descricao = "") {
+  const tt = ` ${normalizar(titulo)} `;
+  for (const [re, areas] of CARGOS_COMPOSTOS) if (re.test(tt)) return areas;
+  const tc = ` ${normalizar(categoria)} `;
+  const td = ` ${normalizar(descricao)} `;
+  const pontos = AREAS.map((a) => ({
+    id: a.id,
+    p: a.termos.reduce((s, termo) => s + (tt.includes(termo) ? 3 : 0) + (tc.includes(termo) ? 2 : 0) + (td.includes(termo) ? 1 : 0), 0),
+  }))
+    .filter((x) => x.p > 0)
+    .sort((a, b) => b.p - a.p);
+  if (!pontos.length) return ["outros"];
+  const [prim, seg] = pontos;
+  return seg && seg.p >= 3 && seg.p >= prim.p * 0.6 ? [prim.id, seg.id] : [prim.id];
 }
+
+export const classificarArea = (titulo, categoria, descricao) => classificarAreas(titulo, categoria, descricao)[0];
+// Vagas salvas antes das áreas múltiplas só têm `area`.
+export const areasDaVaga = (v) => v.areas || [v.area];
 
 // Salário escrito no texto da vaga ("Salário: R$ 3.500,00", "Remuneração de R$ 4.000 a R$ 5.000").
 // Só vale logo depois de uma palavra de salário, para não pegar valor de vale-refeição etc.
@@ -136,7 +155,10 @@ export function montarVaga(v) {
     // Quando a fonte informa modalidade/nível, vale o dado da fonte; senão deduzimos do texto.
     nivel: v.nivel || classificarNivel(v.titulo, descricao),
     modalidade: v.modalidade || classificarModalidade({ ...v, descricao }),
-    area: classificarArea(v.titulo, v.categoria || "", descricao.slice(0, 600)),
+    ...(() => {
+      const areas = classificarAreas(v.titulo, v.categoria || "", descricao.slice(0, 1200));
+      return { area: areas[0], areas };
+    })(),
     idioma: detectarIdioma(`${v.titulo}\n${descricao}`),
   };
 }

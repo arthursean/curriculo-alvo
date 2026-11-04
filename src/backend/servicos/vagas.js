@@ -1,5 +1,5 @@
 import "server-only";
-import { montarVaga, termosParaAreas } from "@/shared/vagas";
+import { areasDaVaga, montarVaga, termosParaAreas } from "@/shared/vagas";
 import { diasDesde } from "@/shared/texto";
 import { coordenadas, distanciaKm, localizar } from "@/backend/geo/municipios";
 import { ErroApp } from "@/backend/http/erros";
@@ -72,7 +72,7 @@ export async function buscarVagas({ q, uf, cidade, raio = 0, dias, modalidades =
   if (dias) vagas = vagas.filter((v) => diasDesde(v.publicadaEm) <= dias);
   if (modalidades.length) vagas = vagas.filter((v) => modalidades.includes(v.modalidade));
   if (niveis.length) vagas = vagas.filter((v) => niveis.includes(v.nivel));
-  if (areas.length) vagas = vagas.filter((v) => areas.includes(v.area));
+  if (areas.length) vagas = vagas.filter((v) => areasDaVaga(v).some((a) => areas.includes(a)));
   vagas.sort((a, b) => new Date(b.publicadaEm) - new Date(a.publicadaEm));
   vagas = vagas.slice(0, 200);
 

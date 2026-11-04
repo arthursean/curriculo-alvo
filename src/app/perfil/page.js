@@ -6,6 +6,7 @@ import MesAno from "@/frontend/components/MesAno";
 import Autocompletar from "@/frontend/components/Autocompletar";
 import SeletorLocal from "@/frontend/components/SeletorLocal";
 import ImportarCurriculo from "@/frontend/components/ImportarCurriculo";
+import EditorTexto from "@/frontend/components/EditorTexto";
 import { IDIOMAS } from "@/shared/idiomas";
 import { carregarPerfil, salvarPerfil } from "@/frontend/lib/api";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
@@ -138,8 +139,8 @@ export default function Perfil() {
                 <label className="check"><input type="checkbox" checked={e.atual} onChange={(ev) => setLista("experiencias", e.id, "atual", ev.target.checked)} /> Trabalho atual</label>
               </div>
             </div>
-            <Campo rotulo="Atividades e resultados (um por linha)">
-              <textarea value={e.descricao} onChange={(ev) => setLista("experiencias", e.id, "descricao", ev.target.value)} placeholder={"Criei dashboards que reduziram o tempo de fechamento em 30%\nAutomatizei relatórios semanais com Python"} />
+            <Campo rotulo="Atividades e resultados">
+              <EditorTexto rotulo="Atividades e resultados" valor={e.descricao} onChange={(v) => setLista("experiencias", e.id, "descricao", v)} placeholder={"Criei dashboards que reduziram o tempo de fechamento em 30%\nAutomatizei relatórios semanais com Python"} />
             </Campo>
             <div className="row">
               <button className="btn ghost sm" onClick={() => mover("experiencias", e.id, -1)}>↑ Subir</button>
@@ -169,8 +170,8 @@ export default function Perfil() {
             <Campo rotulo="Tecnologias / ferramentas">
               <input value={p.tecnologias} onChange={(ev) => setLista("projetos", p.id, "tecnologias", ev.target.value)} placeholder="React, Node.js, PostgreSQL" />
             </Campo>
-            <Campo rotulo="O que você fez e resultados (um por linha)">
-              <textarea value={p.descricao} onChange={(ev) => setLista("projetos", p.id, "descricao", ev.target.value)} placeholder={"Desenvolvi o app do zero, com login e gráficos de gastos\n200 usuários ativos no primeiro mês"} />
+            <Campo rotulo="O que você fez e resultados">
+              <EditorTexto rotulo="O que você fez no projeto" valor={p.descricao} onChange={(v) => setLista("projetos", p.id, "descricao", v)} placeholder={"Desenvolvi o app do zero, com login e gráficos de gastos\n200 usuários ativos no primeiro mês"} />
             </Campo>
             <div className="row">
               <button className="btn ghost sm" onClick={() => mover("projetos", p.id, -1)}>↑ Subir</button>
@@ -202,12 +203,13 @@ export default function Perfil() {
               <div style={{ alignSelf: "end" }}><button className="btn ghost sm" onClick={() => remover("formacao", f.id)}>Remover</button></div>
             </div>
             <div style={{ marginTop: 12 }}>
-              <Campo rotulo="Descrição (opcional, um tópico por linha)">
-                <textarea
-                  value={f.descricao || ""}
-                  onChange={(ev) => setLista("formacao", f.id, "descricao", ev.target.value)}
+              <Campo rotulo="Descrição (opcional)">
+                <EditorTexto
+                  rotulo="Descrição da formação"
+                  valor={f.descricao || ""}
+                  onChange={(v) => setLista("formacao", f.id, "descricao", v)}
                   placeholder={"TCC: análise de churn com Python e SQL (nota 10)\nDisciplinas: Estatística, Banco de Dados, Machine Learning\nMonitoria de Programação por 2 semestres"}
-                  style={{ minHeight: 72 }}
+                  minimo={72}
                 />
               </Campo>
             </div>

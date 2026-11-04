@@ -359,7 +359,25 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 }
 @media (max-width: 700px) {
   /* Prévias dos modelos numa faixa rolável na horizontal, em vez de ocupar a tela toda */
-  .seletor-visual { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 92px; overflow-x: auto; padding-bottom: 6px; }
+  .seletor-visual { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 92px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
   .opcao-modelo { padding: 6px; }
   .opcao-modelo .nome-modelo { font-size: .78rem; }
 }
+
+/* Editor de descrição (negrito, itálico, sublinhado e tópicos) */
+.editor-texto { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.editor-texto:focus-within { outline: 2px solid var(--primary-soft); border-color: var(--primary); }
+.ed-barra { display: flex; align-items: center; gap: 2px; padding: 4px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.ed-botao { border: 0; background: transparent; color: var(--text); font: inherit; font-size: .85rem; min-width: 32px; height: 30px; padding: 0 8px; border-radius: 6px; cursor: pointer; }
+.ed-botao:hover { background: var(--surface-2); }
+.ed-divisor { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+.ed-area { padding: 9px 11px; outline: none; line-height: 1.45; overflow-wrap: anywhere; }
+.ed-area:empty::before { content: attr(data-placeholder); color: var(--muted); white-space: pre-line; pointer-events: none; }
+.ed-area .ed-topico { position: relative; padding-left: 1.1em; }
+.ed-area .ed-topico::before { content: "•"; position: absolute; left: .25em; }
+@media (max-width: 700px) { .ed-area { font-size: 16px; } }
+
+/* Descrições no currículo: cada linha num bloco; tópicos com marcador e recuo */
+.cv .cv-linha { display: block; }
+.cv .cv-topico { display: block; position: relative; padding-left: 1.1em; text-align: left; }
+.cv .cv-topico::before { content: "•"; position: absolute; left: .2em; }

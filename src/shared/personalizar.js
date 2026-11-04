@@ -12,6 +12,7 @@ import { diasDesde, normalizar } from "./texto";
 import { classificarNivel } from "./vagas";
 import { detectarIdiomaPerfil } from "./traducao";
 import { SKILLS, ancestrais, ehAmplo, paiEmComum } from "./skills";
+import { ehTopico, semEstilo } from "./formatacao";
 
 const IDIOMAS = [["Inglês", "ingles", "english"], ["Espanhol", "espanhol", "spanish"], ["Francês", "frances", "french"], ["Alemão", "alemao", "german", "deutsch"]];
 const NIVEL_IDIOMA = { "Básico": 1, "Intermediário": 2, "Avançado": 3, "Fluente": 4, "Nativo": 5 };
@@ -319,10 +320,28 @@ export function personalizar(perfil, vaga, escolhas = {}) {
     }
     return linha;
   };
-  const ordenarItens = (texto) => linhas(texto)
-    .map((l, i) => ({ l, i, p: pontuar(l) + (/\d/.test(l) ? 1 : 0) }))
-    .sort((a, b) => b.p - a.p || a.i - b.i)
-    .map((x) => x.l);
+  // Tópicos mais ligados à vaga sobem. Com tópicos marcados no perfil, cada linha é um item e só
+  // os tópicos trocam de lugar entre si (parágrafos ficam onde estão, com a formatação intacta).
+  // Sem marcação (texto corrido), vale o comportamento antigo: frase a frase.
+  const ordenarItens = (texto, bonusNumero = true) => {
+    const nota = (l) => pontuar(semEstilo(l)) + (bonusNumero && /\d/.test(l) ? 1 : 0);
+    const porNota = (lista) => lista.map((l, i) => ({ l, i, p: nota(l) })).sort((a, b) => b.p - a.p || a.i - b.i).map((x) => x.l);
+    const linhasPerfil = String(texto || "").split("\n").map((l) => l.trim()).filter(Boolean);
+    if (!linhasPerfil.some(ehTopico)) {
+      // (sem tirar "*" do começo: pode ser o início de um negrito)
+      const frases = linhasPerfil.flatMap((l) => l.split(/;|(?<=\.)\s+(?=[A-ZÀ-Ú])/)).map((l) => l.trim()).filter(Boolean);
+      return porNota(frases);
+    }
+    const out = [];
+    let grupo = [];
+    const fechar = () => { out.push(...porNota(grupo)); grupo = []; };
+    for (const l of linhasPerfil) {
+      if (ehTopico(l)) grupo.push(l);
+      else { fechar(); out.push(l); }
+    }
+    fechar();
+    return out;
+  };
 
   // Experiências: as sem relação com a vaga ficam de fora (se nenhuma tiver, fica a mais recente).
   const relevanciaExp = (e) => {
@@ -358,10 +377,7 @@ export function personalizar(perfil, vaga, escolhas = {}) {
   });
   const formacao = form.incluidos.map(({ x: f }) => ({
     ...f,
-    itens: linhas(f.descricao)
-      .map((l, i) => ({ l, i, p: pontuar(l) }))
-      .sort((a, b) => b.p - a.p || a.i - b.i)
-      .map((x) => anotar(x.l)),
+    itens: ordenarItens(f.descricao, false).map(anotar),
   }));
 
   // ---- Compatibilidade ----------------------------------------------------------------
