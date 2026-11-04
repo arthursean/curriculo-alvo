@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AREAS, MODALIDADES, NIVEIS } from "@/shared/vagas";
@@ -107,6 +107,7 @@ export default function Vagas() {
   const [semSalario, setSemSalario] = useState(true);
   const [vagas, setVagas] = useState(null);
   const [fontes, setFontes] = useState([]);
+  const [termosArea, setTermosArea] = useState([]); // termos usados numa busca só por área
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [aba, setAba] = useState("busca"); // "busca" | "favoritas"
@@ -121,30 +122,41 @@ export default function Vagas() {
     if (dados) setFavoritas(new Map(dados.favoritos.map((f) => [f.vaga.id, f.vaga])));
   }, [dados]);
 
+  // Áreas da última busca feita só por área (sem palavra-chave), para não repetir a mesma busca.
+  const areasBuscadas = useRef("");
+
   useEffect(() => {
     try {
       const ultima = JSON.parse(sessionStorage.getItem(CHAVE_BUSCA) || "null");
       if (ultima) {
         setQ(ultima.q); setLocal(ultima.local); setDias(ultima.dias);
-        setVagas(ultima.vagas); setFontes(ultima.fontes);
+        setVagas(ultima.vagas); setFontes(ultima.fontes); setTermosArea(ultima.termosArea || []);
+        if (!ultima.q && ultima.areas?.length) {
+          areasBuscadas.current = [...ultima.areas].sort().join(",");
+          setAreas(ultima.areas);
+        }
       }
     } catch { /* sem busca anterior */ }
   }, []);
 
   async function buscar(e) {
     e?.preventDefault();
-    if (!q.trim()) return;
+    const porArea = !q.trim();
+    if (porArea && !areas.length) return;
     setCarregando(true);
     setErro("");
     setAba("busca");
     setAberta(null);
     try {
-      // Os filtros de modalidade/nível/área são aplicados na tela, para trocar sem nova busca.
-      const data = await buscarVagas({ q, local, dias: String(dias) });
+      // Com palavra-chave, os filtros de modalidade/nível/área são aplicados na tela (trocar sem nova busca).
+      // Sem palavra-chave, as áreas marcadas viram a própria busca.
+      const data = await buscarVagas({ q, local, dias: String(dias), area: porArea ? areas : [] });
+      areasBuscadas.current = porArea ? [...areas].sort().join(",") : "";
       setVagas(data.vagas);
       setFontes(data.fontes);
+      setTermosArea(data.termos || []);
       try {
-        sessionStorage.setItem(CHAVE_BUSCA, JSON.stringify({ q, local, dias, vagas: data.vagas, fontes: data.fontes }));
+        sessionStorage.setItem(CHAVE_BUSCA, JSON.stringify({ q, local, dias, areas: porArea ? areas : [], termosArea: data.termos || [], vagas: data.vagas, fontes: data.fontes }));
       } catch { /* cota cheia */ }
     } catch (err) {
       setErro(err.message);
@@ -152,6 +164,21 @@ export default function Vagas() {
       setCarregando(false);
     }
   }
+
+  // Sem palavra-chave: marcar (ou desmarcar) uma área já busca, depois de uma pausa curta
+  // para dar tempo de marcar mais de uma.
+  useEffect(() => {
+    if (q.trim()) return;
+    const chave = [...areas].sort().join(",");
+    if (chave === areasBuscadas.current) return;
+    if (!areas.length) {
+      if (areasBuscadas.current) { setVagas(null); setFontes([]); setTermosArea([]); areasBuscadas.current = ""; }
+      return;
+    }
+    const t = setTimeout(() => buscar(), 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areas]);
 
   async function alternarFavorita(vaga) {
     const era = favoritas.has(vaga.id);
@@ -219,13 +246,13 @@ export default function Vagas() {
     <div className="stack">
       <div>
         <h1>Buscar vagas</h1>
-        <p className="muted" style={{ margin: 0 }}>Veja a compatibilidade de cada vaga com o seu perfil, clique para ver os detalhes e gere o currículo só das que interessarem.</p>
+        <p className="muted" style={{ margin: 0 }}>Digite palavras-chave ou só marque uma área ao lado. Veja a compatibilidade de cada vaga, clique para ver os detalhes e gere o currículo só das que interessarem.</p>
       </div>
 
       <form className="card row" onSubmit={buscar}>
         <div style={{ flex: 3, minWidth: 220 }}>
           <label htmlFor="q">Palavras-chave</label>
-          <input id="q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ex.: analista de dados, react, marketing digital" />
+          <input id="q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ex.: analista de dados, react — ou deixe vazio e marque uma área" />
         </div>
         <div style={{ flex: 2, minWidth: 160 }}>
           <label htmlFor="local">Cidade / estado (opcional)</label>
@@ -237,7 +264,7 @@ export default function Vagas() {
             {PERIODOS.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
           </select>
         </div>
-        <button className="btn" style={{ alignSelf: "end" }} disabled={carregando || !q.trim()}>
+        <button className="btn" style={{ alignSelf: "end" }} disabled={carregando || (!q.trim() && !areas.length)}>
           {carregando ? "Buscando…" : "Buscar"}
         </button>
       </form>
@@ -312,7 +339,10 @@ export default function Vagas() {
             </label>
           </div>
 
-          {aba === "busca" && vagas === null && !carregando && <div className="card vazio">Faça uma busca para ver as vagas.</div>}
+          {aba === "busca" && vagas === null && !carregando && <div className="card vazio">Digite palavras-chave e clique em Buscar, ou só marque uma área ao lado.</div>}
+          {aba === "busca" && termosArea.length > 0 && !carregando && (
+            <p className="muted small" style={{ margin: "0 0 10px" }}>Busca pela área, usando os termos: {termosArea.join(", ")}.</p>
+          )}
           {aba === "busca" && carregando && <div className="card vazio">Buscando vagas em várias fontes…</div>}
           {aba === "favoritas" && favoritas?.size === 0 && <div className="card vazio">Nenhuma vaga favorita. Clique na ☆ de uma vaga para guardá-la aqui.</div>}
 

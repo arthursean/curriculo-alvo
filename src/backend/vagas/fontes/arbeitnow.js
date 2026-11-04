@@ -12,8 +12,19 @@ function bateComBusca(v, q) {
   return termos.every((t) => contem(texto, t));
 }
 
+// A lista é a mesma para qualquer termo: guardada por 5 minutos para uma busca com vários termos
+// (ex.: busca por área) não baixar tudo de novo a cada termo.
+let cache = { em: 0, promessa: null };
+function listaRecente() {
+  if (!cache.promessa || Date.now() - cache.em > 5 * 60_000) {
+    cache = { em: Date.now(), promessa: buscarJson("https://www.arbeitnow.com/api/job-board-api") };
+    cache.promessa.catch(() => { cache = { em: 0, promessa: null }; });
+  }
+  return cache.promessa;
+}
+
 export async function buscar(q) {
-  const data = await buscarJson("https://www.arbeitnow.com/api/job-board-api");
+  const data = await listaRecente();
   return (data.data || [])
     .filter((j) => j.remote)
     .map((j) => ({

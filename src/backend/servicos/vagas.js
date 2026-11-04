@@ -1,5 +1,5 @@
 import "server-only";
-import { montarVaga } from "@/shared/vagas";
+import { montarVaga, termosParaAreas } from "@/shared/vagas";
 import { contem, diasDesde } from "@/shared/texto";
 import { ErroApp } from "@/backend/http/erros";
 import * as gupy from "@/backend/vagas/fontes/gupy";
@@ -12,12 +12,23 @@ import * as arbeitnow from "@/backend/vagas/fontes/arbeitnow";
 // devolvendo vagas no formato comum (veja gupy.js), e acrescente aqui.
 const FONTES = [gupy, solides, adzuna, remotive, arbeitnow];
 
+// Uma fonte com vários termos: junta os resultados; só falha se todos os termos falharem.
+async function buscarNaFonte(fonte, termos, opcoes) {
+  const r = await Promise.allSettled(termos.map((t) => fonte.buscar(t, opcoes)));
+  const ok = r.filter((x) => x.status === "fulfilled");
+  if (!ok.length) throw r[0].reason;
+  if (ok.every((x) => x.value === null)) return null; // fonte opcional sem chave configurada
+  return ok.flatMap((x) => x.value || []);
+}
+
 // Busca em todas as fontes em paralelo; uma fonte fora do ar não derruba as outras.
+// Sem palavra-chave, mas com áreas marcadas, busca pelos termos típicos de cada área.
 export async function buscarVagas({ q, local, dias, modalidades = [], niveis = [], areas = [] }) {
   q = String(q || "").trim();
-  if (!q) throw new ErroApp("Digite ao menos uma palavra-chave.");
+  const termos = q ? [q] : termosParaAreas(areas);
+  if (!termos.length) throw new ErroApp("Digite uma palavra-chave ou marque ao menos uma área.");
 
-  const resultados = await Promise.allSettled(FONTES.map((f) => f.buscar(q, { local, dias })));
+  const resultados = await Promise.allSettled(FONTES.map((f) => buscarNaFonte(f, termos, { local, dias })));
   const fontes = [];
   let vagas = [];
   resultados.forEach((r, i) => {
@@ -43,5 +54,5 @@ export async function buscarVagas({ q, local, dias, modalidades = [], niveis = [
 
   // O total de cada fonte é contado no fim, depois de todos os filtros: assim a soma bate com a lista.
   for (const f of fontes) if (f.ok) f.total = vagas.filter((v) => v.fonte === f.nome).length;
-  return { vagas, fontes };
+  return { vagas, fontes, termos: q ? [] : termos };
 }

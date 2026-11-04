@@ -18,6 +18,36 @@ export const AREAS = [
   { id: "educacao", nome: "Educação", termos: ["professor", "teacher", "educacao", "pedagog", "instrutor", "tutor"] },
 ];
 
+// Termos usados para buscar vagas quando o usuário só marca a área, sem digitar palavra-chave.
+// Os primeiros de cada área são os mais abrangentes (usados quando várias áreas estão marcadas).
+export const BUSCA_POR_AREA = {
+  tecnologia: ["desenvolvedor", "programador", "suporte técnico"],
+  dados: ["dados", "cientista de dados", "BI"],
+  design: ["designer", "UX"],
+  produto: ["product owner", "gerente de projetos"],
+  marketing: ["marketing", "social media"],
+  vendas: ["vendas", "comercial"],
+  financeiro: ["financeiro", "contábil"],
+  rh: ["recursos humanos", "recrutamento"],
+  juridico: ["advogado", "jurídico"],
+  saude: ["enfermeiro", "saúde"],
+  engenharia: ["engenheiro", "manutenção"],
+  administrativo: ["administrativo", "assistente administrativo"],
+  atendimento: ["atendimento", "atendente"],
+  educacao: ["professor", "instrutor"],
+};
+
+// Termos de busca para as áreas marcadas: intercala as áreas (1º termo de cada, depois o 2º…)
+// e limita o total, para não disparar buscas demais nas fontes.
+export function termosParaAreas(areas, maximo = 6) {
+  const listas = areas.map((a) => BUSCA_POR_AREA[a] || []).filter((l) => l.length);
+  const termos = [];
+  for (let i = 0; termos.length < maximo && listas.some((l) => l[i]); i++) {
+    for (const l of listas) if (l[i] && termos.length < maximo) termos.push(l[i]);
+  }
+  return termos;
+}
+
 export const NIVEIS = [
   { id: "estagio", nome: "Estágio / Trainee", re: /\b(estagi\w*|intern(ship)?|trainee|aprendiz)\b/ },
   { id: "junior", nome: "Júnior", re: /\b(junior|jr\.?|entry[- ]level)\b/ },
