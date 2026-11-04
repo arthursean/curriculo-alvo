@@ -1,7 +1,7 @@
 import "server-only";
 import { areasDaVaga, montarVaga, termosParaAreas } from "@/shared/vagas";
 import { diasDesde } from "@/shared/texto";
-import { coordenadas, distanciaKm, localizar } from "@/backend/geo/municipios";
+import { coordenadas, distanciaKm, localizar, ufsNoRaio } from "@/backend/geo/municipios";
 import { ErroApp } from "@/backend/http/erros";
 import * as gupy from "@/backend/vagas/fontes/gupy";
 import * as solides from "@/backend/vagas/fontes/solides";
@@ -50,9 +50,12 @@ export async function buscarVagas({ q, uf, cidade, raio = 0, dias, modalidades =
   const termos = q ? [q] : termosParaAreas(areas);
   if (!termos.length) throw new ErroApp("Digite uma palavra-chave ou marque ao menos uma área.");
   const noLocal = filtroDeLocal({ uf, cidade, raio });
-
-  // O local é filtrado só aqui (nunca na fonte): assim as vagas remotas nunca somem por causa da cidade.
-  const resultados = await Promise.allSettled(FONTES.map((f) => buscarNaFonte(f, termos, { dias })));
+  // Estados que o raio alcança: as fontes que filtram por estado (Gupy, Sólides) pedem só esses,
+  // além de buscar as remotas à parte. Assim vagas mais antigas da região não ficam escondidas
+  // atrás das centenas de vagas recentes do país todo. O filtro fino (cidade/raio) continua aqui.
+  const centro = uf && cidade ? coordenadas(cidade, uf) : null;
+  const ufs = uf ? ufsNoRaio(centro, Number(raio) || 0, uf) : [];
+  const resultados = await Promise.allSettled(FONTES.map((f) => buscarNaFonte(f, termos, { dias, ufs })));
   const fontes = [];
   let vagas = [];
   resultados.forEach((r, i) => {
@@ -74,7 +77,16 @@ export async function buscarVagas({ q, uf, cidade, raio = 0, dias, modalidades =
   if (niveis.length) vagas = vagas.filter((v) => niveis.includes(v.nivel));
   if (areas.length) vagas = vagas.filter((v) => areasDaVaga(v).some((a) => areas.includes(a)));
   vagas.sort((a, b) => new Date(b.publicadaEm) - new Date(a.publicadaEm));
-  vagas = vagas.slice(0, 200);
+  // Limite da lista. Com local escolhido, as vagas da região entram todas e as remotas completam:
+  // senão centenas de remotas recentes empurravam para fora as vagas mais antigas da região.
+  const LIMITE = 400;
+  if (noLocal) {
+    const daRegiao = vagas.filter((v) => v.modalidade !== "remoto").slice(0, LIMITE);
+    const remotas = vagas.filter((v) => v.modalidade === "remoto").slice(0, LIMITE - daRegiao.length);
+    vagas = [...daRegiao, ...remotas].sort((a, b) => new Date(b.publicadaEm) - new Date(a.publicadaEm));
+  } else {
+    vagas = vagas.slice(0, LIMITE);
+  }
 
   // O total de cada fonte é contado no fim, depois de todos os filtros: assim a soma bate com a lista.
   for (const f of fontes) if (f.ok) f.total = vagas.filter((v) => v.fonte === f.nome).length;

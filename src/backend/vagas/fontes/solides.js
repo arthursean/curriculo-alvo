@@ -29,10 +29,23 @@ function faixa(s) {
 
 export const nome = "Sólides";
 
-export async function buscar(q) {
-  // A API aceita no máximo 25 por página (acima disso responde 500): buscamos 2 páginas.
-  const paginas = await Promise.all([1, 2].map((p) =>
-    buscarJson(`https://vagas.solides.com.br/api/vacancies?page=${p}&take=25&title=${encodeURIComponent(q)}&locations=`).catch(() => ({}))));
+const pagina = (q, p, locais = "") =>
+  buscarJson(`https://vagas.solides.com.br/api/vacancies?page=${p}&take=25&title=${encodeURIComponent(q)}&locations=${encodeURIComponent(locais)}`).catch(() => ({}));
+
+export async function buscar(q, { ufs = [] } = {}) {
+  // A API aceita no máximo 25 por página (acima disso responde 500). Sempre 2 páginas do Brasil
+  // todo (é onde vêm as remotas); com local escolhido, também as páginas dos estados do raio
+  // (filtro da própria Sólides, aceita "PE,PB").
+  const tarefas = [1, 2].map((p) => pagina(q, p));
+  if (ufs.length) {
+    const locais = ufs.join(",");
+    tarefas.push(pagina(q, 1, locais).then(async (primeira) => {
+      const total = Math.min(primeira.totalPages || 1, 6);
+      const resto = await Promise.all(Array.from({ length: total - 1 }, (_, i) => pagina(q, i + 2, locais)));
+      return { data: [primeira, ...resto].flatMap((d) => d.data || []) };
+    }));
+  }
+  const paginas = await Promise.all(tarefas);
   if (paginas.every((d) => !d.data)) throw new Error("Sólides indisponível");
   return paginas.flatMap((d) => d.data || []).map((j) => ({
     id: `solides-${j.id}`,

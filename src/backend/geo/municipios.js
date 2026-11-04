@@ -37,3 +37,14 @@ export function distanciaKm([lat1, lon1], [lat2, lon2]) {
   const a = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
   return 6371 * 2 * Math.asin(Math.sqrt(a));
 }
+
+// Estados que têm alguma cidade dentro do raio (para pedir às fontes só as vagas dessas UFs).
+export function ufsNoRaio(centro, raioKm, ufCentro) {
+  const ufs = new Set([String(ufCentro || "").toUpperCase()]);
+  if (!centro || !raioKm) return [...ufs].filter(Boolean);
+  for (const [uf, lista] of Object.entries(MUNICIPIOS)) {
+    if (ufs.has(uf)) continue;
+    if (lista.some(([, lat, lon]) => distanciaKm(centro, [lat, lon]) <= raioKm)) ufs.add(uf);
+  }
+  return [...ufs].filter(Boolean);
+}
