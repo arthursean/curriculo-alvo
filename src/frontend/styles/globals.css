@@ -400,3 +400,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 /* Candidatura enviada */
 .btn.enviada { background: var(--ok-soft); color: var(--ok); border: 1px solid var(--ok); }
 .btn.enviada:hover { filter: brightness(1.05); }
+
+/* Paginação da lista de vagas */
+.paginacao { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.paginacao-meio { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 400; flex-wrap: wrap; justify-content: center; }
+.paginacao-meio select { width: auto; padding: 5px 8px; }
+@media (max-width: 520px) { .paginacao-meio .muted:last-child { flex-basis: 100%; text-align: center; } }

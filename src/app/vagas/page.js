@@ -11,6 +11,7 @@ import { buscarVagas, carregarCurriculos, carregarFavoritos, carregarPerfil, des
 import { guardarVagaAtual } from "@/frontend/lib/navegacao";
 import SeletorLocal from "@/frontend/components/SeletorLocal";
 import BotaoEnviada, { useCandidaturas } from "@/frontend/components/BotaoEnviada";
+import Paginacao from "@/frontend/components/Paginacao";
 import ResumoBusca from "@/frontend/components/ResumoBusca";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 
@@ -36,6 +37,8 @@ function alternar(lista, valor) {
 
 // Versão no nome da chave: buscas salvas por versões antigas (com regras de filtro antigas) são ignoradas.
 const CHAVE_BUSCA = "ca:busca:v3";
+
+const POR_PAGINA = 30;
 
 const faixa = (p) => (p >= 70 ? "alta" : p >= 40 ? "media" : "baixa");
 
@@ -254,6 +257,29 @@ export default function Vagas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, modalidades, niveis, areas, filtroSalario, ordem, avaliacoes]);
 
+  // 30 vagas por página. Nova busca, outro filtro ou outra ordem voltam para a 1ª página.
+  const [pagina, setPagina] = useState(1);
+  const topoLista = useRef(null);
+  useEffect(() => setPagina(1), [vagas, modalidades, niveis, areas, salMin, salMax, semSalario, ordem, aba]);
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const visiveis = filtradas.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
+  const mudarPagina = (n) => {
+    setPagina(n);
+    setAberta(null);
+    topoLista.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const paginacao = (
+    <Paginacao
+      pagina={paginaAtual}
+      totalPaginas={totalPaginas}
+      onMudar={mudarPagina}
+      inicio={(paginaAtual - 1) * POR_PAGINA + 1}
+      fim={Math.min(paginaAtual * POR_PAGINA, filtradas.length)}
+      total={filtradas.length}
+    />
+  );
+
   const contagem = (campo, id) =>
     base.filter((v) => passa(v, campo) && (campo === "area" ? areasDaVaga(v).includes(id) : v[campo] === id)).length;
   const comSalario = base.filter((v) => passa(v, "salario") && v.salarioMin != null).length;
@@ -411,7 +437,9 @@ export default function Vagas() {
             <ResumoBusca vagas={filtradas} avaliacoes={avaliacoes} />
           )}
 
-          {!(aba === "busca" && carregando) && filtradas.map((v) => {
+          <div ref={topoLista} />
+          {!(aba === "busca" && carregando) && paginacao}
+          {!(aba === "busca" && carregando) && visiveis.map((v) => {
             const av = avaliacoes.get(v.id);
             const estaAberta = aberta === v.id;
             const fav = favoritas?.has(v.id);
@@ -470,6 +498,7 @@ export default function Vagas() {
               </article>
             );
           })}
+          {!(aba === "busca" && carregando) && visiveis.length > 0 && <div style={{ marginTop: 14 }}>{paginacao}</div>}
         </section>
       </div>
     </div>

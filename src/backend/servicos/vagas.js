@@ -60,9 +60,9 @@ const palavrasDe = (q) => normalizar(q).split(/[\s,;/]+/).filter((p) => p.length
 // remotas pelos termos da área), cada uma classificada aqui. A PALAVRA-CHAVE só filtra: a vaga
 // precisa ter todas as palavras no título, nas tags ou na descrição. Assim digitar uma palavra
 // nunca traz mais vagas do que só marcar a área.
-export async function buscarVagas({ q, uf, cidade, raio = 0, dias, modalidades = [], niveis = [], areas = [] }) {
-  q = String(q || "").trim();
-  if (!q && !areas.length) throw new ErroApp("Digite uma palavra-chave ou marque ao menos uma área.");
+// Uma busca (palavra-chave ou UMA área). Devolve a lista já com o limite e os ids de tudo o que
+// passou nos filtros (para o total "800 de N").
+async function buscarConjunto({ q, uf, cidade, raio = 0, dias, modalidades = [], niveis = [], areas = [] }) {
   const termosArea = areas.length ? termosParaAreas(areas) : [];
   // Com áreas, a palavra-chave NÃO vira busca nas fontes (traria vagas fora do conjunto da área):
   // ela só filtra o que a área trouxe. Sem áreas, a palavra-chave é a própria busca.
@@ -111,7 +111,7 @@ export async function buscarVagas({ q, uf, cidade, raio = 0, dias, modalidades =
   // Limite da lista. Com local escolhido, as vagas da região entram todas e as remotas completam:
   // senão centenas de remotas recentes empurravam para fora as vagas mais antigas da região.
   const LIMITE = 800;
-  const encontradas = vagas.length; // antes do limite: a tela mostra "800 de N"
+  const encontradasIds = vagas.map((v) => v.id); // antes do limite: a tela mostra "800 de N"
   // Descrições muito longas são cortadas na lista (a resposta da função tem limite de tamanho
   // na Vercel; 6.000 caracteres cobrem a descrição inteira da imensa maioria das vagas).
   const MAX_DESCRICAO = 6000;
@@ -125,8 +125,52 @@ export async function buscarVagas({ q, uf, cidade, raio = 0, dias, modalidades =
   }
 
   vagas = vagas.map(cortar);
+  return { vagas, idsEncontradas: encontradasIds, fontes, termos: q ? [] : termosArea, regiaoCompleta: regiaoCoberta };
+}
 
+// A Vercel recusa respostas de função acima de 4,5 MB. Se a lista passar de ~3,8 MB (só em
+// buscas muito grandes, como várias áreas sem estado), primeiro encurta as descrições longas e,
+// se ainda não couber, deixa de fora as vagas mais antigas.
+const ORCAMENTO_BYTES = 3_800_000;
+const bytes = (vagas) => Buffer.byteLength(JSON.stringify(vagas));
+function caberNaResposta(vagas) {
+  if (bytes(vagas) <= ORCAMENTO_BYTES) return vagas;
+  const curtas = vagas.map((v) => (v.descricao?.length > 3000 ? { ...v, descricao: `${v.descricao.slice(0, 3000)}…` } : v));
+  let tamanho = bytes(curtas);
+  if (tamanho <= ORCAMENTO_BYTES) return curtas;
+  // Remove das mais antigas (fim da lista, que está em ordem de data) até caber.
+  const medio = tamanho / curtas.length;
+  return curtas.slice(0, Math.floor(ORCAMENTO_BYTES / medio));
+}
+
+// Várias áreas marcadas = a JUNÇÃO das buscas de cada área sozinha (cada uma com todos os seus
+// termos e o seu próprio limite). Assim Tecnologia + Dados mostra exatamente as vagas de
+// Tecnologia mais as de Dados. As fontes ficam em cache, então a região é baixada uma vez só.
+export async function buscarVagas(params) {
+  const q = String(params.q || "").trim();
+  const areas = params.areas || [];
+  if (!q && !areas.length) throw new ErroApp("Digite uma palavra-chave ou marque ao menos uma área.");
+  const conjuntos = areas.length > 1 ? areas.map((a) => [a]) : [areas];
+  const rs = await Promise.all(conjuntos.map((a) => buscarConjunto({ ...params, q, areas: a })));
+
+  let vagas = [...new Map(rs.flatMap((r) => r.vagas).map((v) => [v.id, v])).values()]
+    .sort((a, b) => new Date(b.publicadaEm) - new Date(a.publicadaEm));
+  vagas = caberNaResposta(vagas);
+  const encontradas = new Set(rs.flatMap((r) => r.idsEncontradas)).size;
+  // Uma fonte está ok se respondeu em alguma das buscas.
+  const porNome = new Map();
+  for (const f of rs.flatMap((r) => r.fontes)) {
+    const atual = porNome.get(f.nome);
+    if (!atual || (!atual.ok && f.ok)) porNome.set(f.nome, { ...f });
+  }
+  const fontes = [...porNome.values()];
   // O total de cada fonte é contado no fim, depois de todos os filtros: assim a soma bate com a lista.
   for (const f of fontes) if (f.ok) f.total = vagas.filter((v) => v.fonte === f.nome).length;
-  return { vagas, encontradas, fontes, termos: q ? [] : termosArea, regiaoCompleta: regiaoCoberta };
+  return {
+    vagas,
+    encontradas: Math.max(encontradas, vagas.length),
+    fontes,
+    termos: [...new Set(rs.flatMap((r) => r.termos))],
+    regiaoCompleta: rs.some((r) => r.regiaoCompleta),
+  };
 }
