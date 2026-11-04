@@ -51,3 +51,8 @@ export async function buscar(q) {
       fonte: nome,
     }));
 }
+
+// Todas as recentes (para a busca por área: a área é decidida pelo título aqui).
+export async function todas() {
+  return buscar("");
+}

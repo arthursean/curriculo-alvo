@@ -115,7 +115,9 @@ export default function Vagas() {
   const [semSalario, setSemSalario] = useState(true);
   const [vagas, setVagas] = useState(null);
   const [fontes, setFontes] = useState([]);
-  const [termosArea, setTermosArea] = useState([]); // termos usados numa busca só por área
+  const [encontradas, setEncontradas] = useState(0); // total antes do limite de 800
+  const [termosArea, setTermosArea] = useState([]); // termos usados numa busca por área
+  const [regiaoCompleta, setRegiaoCompleta] = useState(false); // a busca trouxe todas as vagas da região
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [aba, setAba] = useState("busca"); // "busca" | "favoritas"
@@ -141,8 +143,8 @@ export default function Vagas() {
       const ultima = JSON.parse(sessionStorage.getItem(CHAVE_BUSCA) || "null");
       if (ultima) {
         setQ(ultima.q); setLocal(ultima.local || { uf: "", cidade: "" }); setRaio(ultima.raio || 0); setDias(ultima.dias);
-        setVagas(ultima.vagas); setFontes(ultima.fontes); setTermosArea(ultima.termosArea || []);
-        if (!ultima.q && ultima.areas?.length) {
+        setVagas(ultima.vagas); setFontes(ultima.fontes); setTermosArea(ultima.termosArea || []); setRegiaoCompleta(Boolean(ultima.regiaoCompleta)); setEncontradas(ultima.encontradas || 0);
+        if (ultima.areas?.length) {
           areasBuscadas.current = [...ultima.areas].sort().join(",");
           setAreas(ultima.areas);
         }
@@ -152,22 +154,23 @@ export default function Vagas() {
 
   async function buscar(e) {
     e?.preventDefault();
-    const porArea = !q.trim();
-    if (porArea && !areas.length) return;
+    if (!q.trim() && !areas.length) return;
     setCarregando(true);
     setErro("");
     setAba("busca");
     setAberta(null);
     try {
-      // Com palavra-chave, os filtros de modalidade/nível/área são aplicados na tela (trocar sem nova busca).
-      // Sem palavra-chave, as áreas marcadas viram a própria busca.
-      const data = await buscarVagas({ q, uf: local.uf, cidade: local.cidade, raio: local.cidade ? String(raio) : "", dias: String(dias), area: porArea ? areas : [] });
-      areasBuscadas.current = porArea ? [...areas].sort().join(",") : "";
+      // As áreas marcadas definem quais vagas vêm (todas as da área); a palavra-chave só filtra.
+      // Modalidade, nível e salário são aplicados na tela (trocar sem nova busca).
+      const data = await buscarVagas({ q, uf: local.uf, cidade: local.cidade, raio: local.cidade ? String(raio) : "", dias: String(dias), area: areas });
+      areasBuscadas.current = [...areas].sort().join(",");
+      setRegiaoCompleta(Boolean(data.regiaoCompleta));
       setVagas(data.vagas);
       setFontes(data.fontes);
+      setEncontradas(data.encontradas || 0);
       setTermosArea(data.termos || []);
       try {
-        sessionStorage.setItem(CHAVE_BUSCA, JSON.stringify({ q, local, raio, dias, areas: porArea ? areas : [], termosArea: data.termos || [], vagas: data.vagas, fontes: data.fontes }));
+        sessionStorage.setItem(CHAVE_BUSCA, JSON.stringify({ q, local, raio, dias, areas, encontradas: data.encontradas || 0, termosArea: data.termos || [], regiaoCompleta: Boolean(data.regiaoCompleta), vagas: data.vagas, fontes: data.fontes }));
       } catch { /* cota cheia */ }
     } catch (err) {
       setErro(err.message);
@@ -176,16 +179,16 @@ export default function Vagas() {
     }
   }
 
-  // Sem palavra-chave: marcar (ou desmarcar) uma área já busca, depois de uma pausa curta
-  // para dar tempo de marcar mais de uma.
+  // Marcar (ou desmarcar) uma área busca de novo, depois de uma pausa curta para dar tempo de
+  // marcar mais de uma. Com palavra-chave, a busca continua com ela (a palavra filtra a área).
   useEffect(() => {
-    if (q.trim()) return;
     const chave = [...areas].sort().join(",");
     if (chave === areasBuscadas.current) return;
-    if (!areas.length) {
+    if (!areas.length && !q.trim()) {
       if (areasBuscadas.current) { setVagas(null); setFontes([]); setTermosArea([]); areasBuscadas.current = ""; }
       return;
     }
+    if (!areas.length && vagas === null) return;
     const t = setTimeout(() => buscar(), 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -321,7 +324,7 @@ export default function Vagas() {
             {[...AREAS.map((a) => a.id), "outros"].map((id) => (
               <label key={id} className="check">
                 <input type="checkbox" checked={areas.includes(id)} onChange={() => setAreas(alternar(areas, id))} />
-                {AREA_NOME[id]} <span className="muted small">({contagem("area", id)})</span>
+                {AREA_NOME[id]}{(!areas.length || areas.includes(id)) && <span className="muted small"> ({contagem("area", id)})</span>}
               </label>
             ))}
           </fieldset>
@@ -363,15 +366,29 @@ export default function Vagas() {
           </div>
 
           {aba === "busca" && vagas === null && !carregando && <div className="card vazio">Digite palavras-chave e clique em Buscar, ou só marque uma área nos filtros.</div>}
-          {aba === "busca" && termosArea.length > 0 && !carregando && (
-            <p className="muted small" style={{ margin: "0 0 10px" }}>Busca pela área, usando os termos: {termosArea.join(", ")}.</p>
+          {aba === "busca" && (termosArea.length > 0 || regiaoCompleta) && !carregando && (
+            <p className="muted small" style={{ margin: "0 0 10px" }}>
+              {regiaoCompleta
+                ? `Todas as vagas da região${areas.length ? " nas áreas marcadas" : ""}${q.trim() ? ` que citam “${q.trim()}”` : ""}, mais as remotas encontradas pelos portais.`
+                : `Vagas das áreas marcadas, buscadas nos portais por termos como ${termosArea.slice(0, 6).join(", ")}. Escolha um estado para ver todas as da região.`}
+            </p>
           )}
-          {aba === "busca" && carregando && <div className="card vazio">Buscando vagas em várias fontes…</div>}
+          {aba === "busca" && carregando && (
+            <div className="card vazio">
+              Buscando vagas em várias fontes…
+              {local.uf && <div className="small" style={{ marginTop: 6 }}>Trazemos todas as vagas da região para filtrar uma a uma: a primeira busca pode levar uns 15 segundos.</div>}
+            </div>
+          )}
           {aba === "favoritas" && favoritas?.size === 0 && <div className="card vazio">Nenhuma vaga favorita. Clique na ☆ de uma vaga para guardá-la aqui.</div>}
 
           {aba === "busca" && vagas && !carregando && (
             <div className="row between small" style={{ marginBottom: 12 }}>
               <strong>{filtradas.length === vagas.length ? `${vagas.length} vaga(s)` : `${filtradas.length} de ${vagas.length} vagas (com os filtros)`}</strong>
+              {aba === "busca" && encontradas > vagas.length && (
+                <span className="muted small">
+                  Mostrando as {vagas.length} mais recentes de {encontradas.toLocaleString("pt-BR")} encontradas. Escolha um estado ou digite uma palavra para filtrar.
+                </span>
+              )}
               <div className="tags">
                 {fontes.map((f) => (
                   <span key={f.nome} className={`tag ${f.ok ? "ok" : "warn"}`} title={f.detalhe || ""}>

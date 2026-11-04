@@ -45,3 +45,8 @@ export async function buscar(q) {
     }))
     .filter((v) => bateComBusca(v, q));
 }
+
+// Todas as remotas da lista (para a busca por área).
+export async function todas() {
+  return buscar("");
+}

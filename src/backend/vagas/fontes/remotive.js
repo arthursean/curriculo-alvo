@@ -8,7 +8,15 @@ const ACEITA_BRASIL = /worldwide|anywhere|global|brazil|brasil|latam|latin ameri
 export const nome = "Remotive";
 
 export async function buscar(q) {
-  const data = await buscarJson(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(q)}&limit=100`);
+  return mapear(await buscarJson(`https://remotive.com/api/remote-jobs?search=${encodeURIComponent(q)}&limit=100`, { cacheMin: 30 }));
+}
+
+// Todas as vagas remotas da Remotive (a API pede poucos acessos: guardamos por 30 minutos).
+export async function todas() {
+  return mapear(await buscarJson("https://remotive.com/api/remote-jobs", { cacheMin: 30 }));
+}
+
+function mapear(data) {
   return (data.jobs || [])
     .filter((j) => !j.candidate_required_location || ACEITA_BRASIL.test(j.candidate_required_location))
     .map((j) => ({

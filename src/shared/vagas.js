@@ -18,28 +18,30 @@ export const AREAS = [
   { id: "educacao", nome: "Educação", termos: ["professor", "teacher", "educacao", "pedagog", "instrutor", "tutor"] },
 ];
 
-// Termos usados para buscar vagas quando o usuário só marca a área, sem digitar palavra-chave.
-// Os primeiros de cada área são os mais abrangentes (usados quando várias áreas estão marcadas).
+// Termos para buscar nas fontes as vagas de uma área (a Gupy e a Sólides só buscam por título).
+// Com local escolhido, a busca por área também traz TODAS as vagas da região e classifica uma a
+// uma; estes termos completam com as remotas e com o Brasil todo. Os primeiros são os mais
+// abrangentes (com várias áreas marcadas, entram os primeiros de cada).
 export const BUSCA_POR_AREA = {
-  tecnologia: ["desenvolvedor", "programador", "suporte técnico"],
-  dados: ["dados", "cientista de dados", "BI"],
-  design: ["designer", "UX"],
-  produto: ["product owner", "gerente de projetos"],
-  marketing: ["marketing", "social media"],
-  vendas: ["vendas", "comercial"],
-  financeiro: ["financeiro", "contábil"],
-  rh: ["recursos humanos", "recrutamento"],
-  juridico: ["advogado", "jurídico"],
-  saude: ["enfermeiro", "saúde"],
-  engenharia: ["engenheiro", "manutenção"],
-  administrativo: ["administrativo", "assistente administrativo"],
-  atendimento: ["atendimento", "atendente"],
-  educacao: ["professor", "instrutor"],
+  tecnologia: ["desenvolvedor", "software", "sistemas", "programador", "suporte", "infraestrutura", "devops", "qa", "front-end", "back-end", "full stack", "mobile", "segurança da informação", "redes", "cloud", "ti"],
+  dados: ["dados", "data", "bi", "analytics", "cientista de dados", "engenheiro de dados", "inteligência artificial", "machine learning", "estatístico"],
+  design: ["designer", "design", "ux", "ui", "produto digital", "motion"],
+  produto: ["product", "produto", "projetos", "scrum", "agile", "pmo"],
+  marketing: ["marketing", "social media", "conteúdo", "comunicação", "growth", "seo", "mídia", "publicidade", "copywriter"],
+  vendas: ["vendas", "vendedor", "comercial", "representante", "consultor de vendas", "sdr", "customer success", "inside sales"],
+  financeiro: ["financeiro", "contábil", "contador", "fiscal", "controladoria", "tesouraria", "faturamento", "auditoria", "custos"],
+  rh: ["recursos humanos", "rh", "recrutamento", "departamento pessoal", "talent", "people", "treinamento"],
+  juridico: ["advogado", "jurídico", "direito", "compliance", "paralegal"],
+  saude: ["enfermeiro", "técnico de enfermagem", "saúde", "médico", "farmacêutico", "fisioterapeuta", "psicólogo", "nutricionista", "dentista"],
+  engenharia: ["engenheiro", "engenharia", "manutenção", "produção", "técnico", "eletricista", "mecânico", "industrial", "qualidade", "segurança do trabalho"],
+  administrativo: ["administrativo", "assistente", "auxiliar", "operações", "logística", "compras", "recepcionista", "secretária", "almoxarife", "estoque"],
+  atendimento: ["atendimento", "atendente", "operador de telemarketing", "sac", "call center", "suporte ao cliente"],
+  educacao: ["professor", "instrutor", "educação", "pedagogo", "monitor", "tutor", "coordenador pedagógico"],
 };
 
 // Termos de busca para as áreas marcadas: intercala as áreas (1º termo de cada, depois o 2º…)
 // e limita o total, para não disparar buscas demais nas fontes.
-export function termosParaAreas(areas, maximo = 6) {
+export function termosParaAreas(areas, maximo = 16) {
   const listas = areas.map((a) => BUSCA_POR_AREA[a] || []).filter((l) => l.length);
   const termos = [];
   for (let i = 0; termos.length < maximo && listas.some((l) => l[i]); i++) {
