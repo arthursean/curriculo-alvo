@@ -72,4 +72,14 @@ export const COMANDOS_SCHEMA = [
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
   )`,
   `CREATE INDEX IF NOT EXISTS eventos_usuario_idx ON eventos (usuario_id, criado_em)`,
+
+  // Vagas que o usuário marcou como "candidatura enviada" (com a compatibilidade da época).
+  `CREATE TABLE IF NOT EXISTS candidaturas (
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    vaga_id TEXT NOT NULL,
+    vaga JSONB NOT NULL,
+    compatibilidade INT,
+    enviada_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (usuario_id, vaga_id)
+  )`,
 ];

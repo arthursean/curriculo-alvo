@@ -8,7 +8,8 @@ import PainelConteudo from "@/frontend/components/PainelConteudo";
 import { personalizar } from "@/shared/personalizar";
 import { detectarIdioma, detectarIdiomaPerfil, IDIOMAS_CV } from "@/shared/traducao";
 import { traduzirCurriculo } from "@/frontend/lib/tradutor";
-import { carregarCurriculos, carregarPerfil, registrarEvento, salvarCurriculo, salvarPerfil } from "@/frontend/lib/api";
+import { carregarCurriculos, carregarPerfil, salvarCurriculo, salvarPerfil } from "@/frontend/lib/api";
+import BotaoEnviada, { useCandidaturas } from "@/frontend/components/BotaoEnviada";
 import SeletorVisual from "@/frontend/components/SeletorVisual";
 import { visualValido } from "@/shared/modelos";
 import { lerVagaAtual } from "@/frontend/lib/navegacao";
@@ -38,6 +39,7 @@ function Personalizar() {
   const [ajuste, setAjuste] = useState(null);
   // Versão traduzida: { idioma, perfil, ajuste, motor }
   const [traducao, setTraducao] = useState(null);
+  const { enviadas, alternar: alternarEnviada } = useCandidaturas();
   const [idiomaAlvo, setIdiomaAlvo] = useState("pt");
   const [traduzindo, setTraduzindo] = useState("");
   const [erro, setErro] = useState("");
@@ -158,7 +160,8 @@ function Personalizar() {
           </div>
           <div className="row">
             <a className="btn sec" href={vaga.url} target="_blank" rel="noopener noreferrer">Ver vaga ↗</a>
-            <button className="btn" disabled={!ajuste || traduzindo} onClick={() => { registrarEvento("pdf", vaga, { compatibilidade: ajuste?.compatibilidade }); window.print(); }}>Imprimir / PDF</button>
+            <button className="btn" disabled={!ajuste || traduzindo} onClick={() => window.print()}>Imprimir / PDF</button>
+            <BotaoEnviada pequeno={false} enviada={enviadas.has(vaga.id)} onClick={() => alternarEnviada(vaga, ajuste?.compatibilidade)} />
           </div>
         </div>
 

@@ -10,6 +10,7 @@ import { perfilCompleto } from "@/shared/perfil";
 import { buscarVagas, carregarCurriculos, carregarFavoritos, carregarPerfil, desfavoritar, favoritar, registrarEvento } from "@/frontend/lib/api";
 import { guardarVagaAtual } from "@/frontend/lib/navegacao";
 import SeletorLocal from "@/frontend/components/SeletorLocal";
+import BotaoEnviada, { useCandidaturas } from "@/frontend/components/BotaoEnviada";
 import ResumoBusca from "@/frontend/components/ResumoBusca";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 
@@ -121,11 +122,8 @@ export default function Vagas() {
   const [ordem, setOrdem] = useState("compatibilidade");
   const [aberta, setAberta] = useState(null);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false); // só no celular
-  // Abre os detalhes de uma vaga e registra para o painel inicial.
-  const abrir = (v) => {
-    setAberta(v.id);
-    registrarEvento("detalhes", v, { compatibilidade: avaliacoes.get(v.id)?.compatibilidade });
-  };
+  const abrir = (v) => setAberta(v.id);
+  const { enviadas, alternar: alternarEnviada, erro: erroEnviada } = useCandidaturas();
   const [favoritas, setFavoritas] = useState(null); // Map id -> vaga
   const { dados } = useProtegido(carregar);
   const perfil = dados?.perfil;
@@ -289,6 +287,7 @@ export default function Vagas() {
       </form>
 
       {erro && <div className="alerta">{erro}</div>}
+      {erroEnviada && <div className="alerta">{erroEnviada}</div>}
       {dados && !perfilOk && (
         <div className="alerta info">Preencha <Link href="/perfil">seu perfil</Link> (nome e competências ou experiências) para ver a compatibilidade de cada vaga.</div>
       )}
@@ -414,6 +413,7 @@ export default function Vagas() {
                   {v.idioma && v.idioma !== "pt" && <span className="tag warn">Vaga em {IDIOMA_NOME[v.idioma]?.toLowerCase()}</span>}
                   {v.salario && <span className="tag ok">{v.salario}</span>}
                   {geradas.has(v.id) && <span className="tag ok">Currículo gerado</span>}
+                  {enviadas.has(v.id) && <span className="tag ok">Candidatura enviada</span>}
                 </div>
 
                 {estaAberta ? (
@@ -426,6 +426,7 @@ export default function Vagas() {
                     <div className="row">
                       <button className="btn sm" onClick={() => gerar(v)} disabled={!perfilOk}>{geradas.has(v.id) ? "Ver currículo" : "Gerar currículo para esta vaga"}</button>
                       <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer" onClick={() => registrarEvento("link", v, { compatibilidade: avaliacoes.get(v.id)?.compatibilidade })}>Ver vaga original ↗</a>
+                      <BotaoEnviada enviada={enviadas.has(v.id)} onClick={() => alternarEnviada(v, av?.compatibilidade)} />
                       <button className="btn ghost sm" onClick={() => setAberta(null)}>Recolher ▲</button>
                     </div>
                   </div>
@@ -437,6 +438,7 @@ export default function Vagas() {
                         {perfilOk ? "Ver compatibilidade e descrição ▼" : "Ver descrição completa ▼"}
                       </button>
                       <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer" onClick={() => registrarEvento("link", v, { compatibilidade: avaliacoes.get(v.id)?.compatibilidade })}>Ver vaga original ↗</a>
+                      <BotaoEnviada enviada={enviadas.has(v.id)} onClick={() => alternarEnviada(v, av?.compatibilidade)} />
                     </div>
                   </>
                 )}

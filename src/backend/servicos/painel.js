@@ -1,13 +1,13 @@
 import "server-only";
 import * as eventos from "@/backend/repositorios/eventos";
 import * as curriculos from "@/backend/repositorios/curriculos";
-import * as favoritos from "@/backend/repositorios/favoritos";
+import * as candidaturas from "@/backend/repositorios/candidaturas";
 import { obterPerfil } from "@/backend/servicos/perfil";
 import { ErroApp } from "@/backend/http/erros";
 import { AREAS } from "@/shared/vagas";
 
-// Tipos que a tela pode registrar. A busca é registrada pelo próprio servidor (rota de vagas).
-const TIPOS_DA_TELA = new Set(["detalhes", "link", "pdf"]);
+// Só o clique em "Ver vaga original" é registrado (lista de vagas visitadas do painel).
+const TIPOS_DA_TELA = new Set(["link"]);
 const AREAS_VALIDAS = new Set(AREAS.map((a) => a.id));
 const MAX_POR_HORA = 600; // acima disso, ignora (protege o banco de cliques automatizados)
 
@@ -20,6 +20,7 @@ function resumoDaVaga(vaga = {}) {
   return {
     titulo: texto(vaga.titulo, 200),
     empresa: texto(vaga.empresa, 120),
+    local: texto(vaga.local, 120),
     fonte: texto(vaga.fonte, 40),
     area: AREAS_VALIDAS.has(vaga.area) ? vaga.area : undefined,
     url: urlSegura(vaga.url),
@@ -27,29 +28,13 @@ function resumoDaVaga(vaga = {}) {
   };
 }
 
-async function gravar(usuarioId, tipo, vagaId, dados) {
-  if ((await eventos.contarUltimaHora(usuarioId)) >= MAX_POR_HORA) return;
-  await eventos.registrar(usuarioId, tipo, vagaId, dados);
-  if (Math.random() < 0.02) await eventos.apagarAntigos(usuarioId);
-}
-
 export async function registrarEvento(usuarioId, { tipo, vaga } = {}) {
   if (!TIPOS_DA_TELA.has(tipo)) throw new ErroApp("Evento inválido.");
   const vagaId = texto(vaga?.id, 200);
   if (!vagaId) throw new ErroApp("Informe a vaga.");
-  await gravar(usuarioId, tipo, vagaId, resumoDaVaga(vaga));
-}
-
-// Chamado pela busca de vagas. Uma falha aqui nunca derruba a busca.
-export async function registrarBusca(usuarioId, { termos, uf, cidade, raio, total }) {
-  try {
-    await gravar(usuarioId, "busca", null, {
-      termos: (termos || []).map((t) => texto(t, 80)).filter(Boolean).slice(0, 6),
-      uf: texto(uf, 2), cidade: texto(cidade, 80), raio: Number(raio) || 0, total: Number(total) || 0,
-    });
-  } catch (e) {
-    console.error("registrarBusca:", e?.message);
-  }
+  if ((await eventos.contarUltimaHora(usuarioId)) >= MAX_POR_HORA) return;
+  await eventos.registrar(usuarioId, tipo, vagaId, resumoDaVaga(vaga));
+  if (Math.random() < 0.02) await eventos.apagarAntigos(usuarioId);
 }
 
 // Itens do perfil que mais pesam na personalização: vira a lista "o que falta".
@@ -67,44 +52,19 @@ function checklistDoPerfil(p) {
   return itens.map(([nome, ok]) => ({ nome, ok }));
 }
 
-function serieDiaria(linhas, dias = 30) {
-  const mapa = new Map(linhas.map((l) => [l.dia, l.vagas]));
-  const hoje = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
-  const out = [];
-  for (let i = dias - 1; i >= 0; i--) {
-    const d = new Date(hoje);
-    d.setDate(d.getDate() - i);
-    const chave = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    out.push({ dia: chave, vagas: mapa.get(chave) || 0 });
-  }
-  return out;
-}
-
 export async function painel(usuarioId) {
-  const [totais, porDia, areas, termos, links, cv, favTotal, favRecentes, perfil] = await Promise.all([
-    eventos.totaisPorTipo(usuarioId),
-    eventos.vagasPorDia(usuarioId, 30),
-    eventos.areasAbertas(usuarioId),
-    eventos.termosBuscados(usuarioId),
-    eventos.ultimosLinks(usuarioId),
+  const [cv, cand, compat, links, perfil] = await Promise.all([
     curriculos.resumo(usuarioId),
-    favoritos.contar(usuarioId),
-    favoritos.recentes(usuarioId),
+    candidaturas.resumo(usuarioId),
+    candidaturas.compatibilidadeGeral(usuarioId),
+    eventos.ultimosLinks(usuarioId),
     obterPerfil(usuarioId),
   ]);
-  const t = Object.fromEntries(totais.map((x) => [x.tipo, x]));
-  const zero = { total: 0, ultimos30: 0, vagas: 0, vagas30: 0 };
   const checklist = checklistDoPerfil(perfil || {});
   return {
-    buscas: t.busca || zero,
-    detalhes: t.detalhes || zero,
-    links: t.link || zero,
-    pdfs: t.pdf || zero,
     curriculos: cv,
-    favoritos: { total: favTotal, recentes: favRecentes },
-    porDia: serieDiaria(porDia, 30),
-    areas,
-    termos,
+    candidaturas: cand,
+    compatibilidade: compat, // { media, vagas }
     ultimosLinks: links.map((l) => ({ vagaId: l.vagaId, em: l.em, ...l.dados })),
     perfil: { checklist, completo: Math.round((checklist.filter((c) => c.ok).length / checklist.length) * 100), nome: perfil?.nome || "" },
   };

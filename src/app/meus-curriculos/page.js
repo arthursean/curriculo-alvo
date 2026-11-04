@@ -4,10 +4,12 @@ import Link from "next/link";
 import { carregarCurriculos, removerCurriculo } from "@/frontend/lib/api";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 import { tempoRelativo } from "@/shared/texto";
+import BotaoEnviada, { useCandidaturas } from "@/frontend/components/BotaoEnviada";
 
 export default function MeusCurriculos() {
   const { dados, erro } = useProtegido(carregarCurriculos);
   const [lista, setLista] = useState(null);
+  const { enviadas, alternar: alternarEnviada } = useCandidaturas();
   useEffect(() => setLista(dados), [dados]);
 
   if (erro) return <div className="alerta">{erro}</div>;
@@ -35,6 +37,7 @@ export default function MeusCurriculos() {
           </div>
           <div className="row">
             <Link className="btn sm" href={`/personalizar?vaga=${encodeURIComponent(vaga.id)}`}>Abrir</Link>
+            <BotaoEnviada enviada={enviadas.has(vaga.id)} onClick={() => alternarEnviada(vaga, ajuste.compatibilidade)} />
             <button className="btn ghost sm" onClick={() => excluir(vaga.id)}>Excluir</button>
           </div>
         </div>

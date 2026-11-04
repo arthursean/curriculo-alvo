@@ -89,3 +89,8 @@ export function registrarEvento(tipo, vaga, extra = {}) {
     // métrica não é essencial
   }
 }
+
+// ---- Candidaturas (vagas marcadas como enviadas) ------------------------------------------
+export const carregarCandidaturas = async () => (await api("/api/candidaturas")).candidaturas;
+export const marcarEnviada = (vaga, compatibilidade) => api("/api/candidaturas", { metodo: "POST", corpo: { vaga, compatibilidade } });
+export const desmarcarEnviada = (vagaId) => api(`/api/candidaturas?vaga=${encodeURIComponent(vagaId)}`, { metodo: "DELETE" });

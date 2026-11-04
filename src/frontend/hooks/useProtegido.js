@@ -21,5 +21,7 @@ export function useProtegido(carregar) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  return { dados, erro };
+  // Busca de novo sem mostrar "Carregando…" (para atualizar números depois de uma ação).
+  const recarregar = () => carregar().then(setDados).catch(() => {});
+  return { dados, erro, recarregar };
 }
