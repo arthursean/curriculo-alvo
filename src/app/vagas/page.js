@@ -152,9 +152,16 @@ export default function Vagas() {
     } catch { /* sem busca anterior */ }
   }, []);
 
+  // Só a busca mais recente vale: se os filtros mudam com uma busca em andamento, a anterior é
+  // cancelada e a resposta dela (se chegar depois) é ignorada. Sem isso, marcar Tecnologia e logo
+  // depois Dados podia terminar mostrando só uma das áreas.
+  const buscaAtual = useRef(null);
   async function buscar(e) {
     e?.preventDefault();
     if (!q.trim() && !areas.length) return;
+    buscaAtual.current?.abort();
+    const controle = new AbortController();
+    buscaAtual.current = controle;
     setCarregando(true);
     setErro("");
     setAba("busca");
@@ -162,7 +169,8 @@ export default function Vagas() {
     try {
       // As áreas marcadas definem quais vagas vêm (todas as da área); a palavra-chave só filtra.
       // Modalidade, nível e salário são aplicados na tela (trocar sem nova busca).
-      const data = await buscarVagas({ q, uf: local.uf, cidade: local.cidade, raio: local.cidade ? String(raio) : "", dias: String(dias), area: areas });
+      const data = await buscarVagas({ q, uf: local.uf, cidade: local.cidade, raio: local.cidade ? String(raio) : "", dias: String(dias), area: areas }, controle.signal);
+      if (buscaAtual.current !== controle) return;
       areasBuscadas.current = [...areas].sort().join(",");
       setRegiaoCompleta(Boolean(data.regiaoCompleta));
       setVagas(data.vagas);
@@ -173,9 +181,9 @@ export default function Vagas() {
         sessionStorage.setItem(CHAVE_BUSCA, JSON.stringify({ q, local, raio, dias, areas, encontradas: data.encontradas || 0, termosArea: data.termos || [], regiaoCompleta: Boolean(data.regiaoCompleta), vagas: data.vagas, fontes: data.fontes }));
       } catch { /* cota cheia */ }
     } catch (err) {
-      setErro(err.message);
+      if (buscaAtual.current === controle) setErro(err.message); // a cancelada não é erro
     } finally {
-      setCarregando(false);
+      if (buscaAtual.current === controle) setCarregando(false);
     }
   }
 

@@ -5,8 +5,9 @@ import { perfilVazio } from "@/shared/perfil";
 
 export class NaoLogado extends Error {}
 
-export async function api(caminho, { metodo = "GET", corpo } = {}) {
+export async function api(caminho, { metodo = "GET", corpo, sinal } = {}) {
   const res = await fetch(caminho, {
+    signal: sinal,
     method: metodo,
     headers: corpo ? { "Content-Type": "application/json" } : undefined,
     body: corpo ? JSON.stringify(corpo) : undefined,
@@ -41,10 +42,11 @@ export const removerCurriculo = (vagaId) => api(`/api/curriculos?vaga=${encodeUR
 
 // ---- Vagas --------------------------------------------------------------------------
 // Valores em lista (ex.: area: ["dados", "design"]) viram parâmetros repetidos (?area=dados&area=design).
-export function buscarVagas(params) {
+// `sinal` (AbortController) cancela uma busca que ficou velha (o usuário mudou os filtros).
+export function buscarVagas(params, sinal) {
   const p = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) for (const item of [].concat(v)) if (item !== undefined && item !== "") p.append(k, item);
-  return api(`/api/vagas?${p}`);
+  return api(`/api/vagas?${p}`, { sinal });
 }
 // Cidades de um estado (lista fixa do servidor). Guardadas na memória: não mudam.
 const cacheCidades = new Map();

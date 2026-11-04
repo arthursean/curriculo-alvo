@@ -1,6 +1,9 @@
 import { buscarVagas } from "@/backend/servicos/vagas";
 import { exigirUsuario, json, rota } from "@/backend/http/requisicao";
 
+// A busca com estado traz todas as vagas da região: pode passar dos 10 s padrão de algumas contas.
+export const maxDuration = 60;
+
 // Só usuários logados buscam, para proteger a cota das APIs de vagas.
 export const GET = rota(async (req) => {
   await exigirUsuario();

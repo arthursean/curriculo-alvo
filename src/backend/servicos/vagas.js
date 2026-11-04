@@ -36,9 +36,15 @@ function filtroDeLocal({ uf, cidade, raio }) {
 
 // Coleta de uma fonte: busca por cada termo e, se pedido, a lista completa (`todas`) da fonte.
 // Só falha se tudo falhar; null = fonte opcional sem chave configurada.
+// Cada pedido tem prazo: o que passar dele conta como falha e a busca segue com o resto. Assim
+// uma fonte lenta não estoura o tempo máximo da função (Vercel) e não derruba a busca inteira.
+const PRAZO_MS = 25_000;
+const comPrazo = (promessa) =>
+  Promise.race([promessa, new Promise((_, rej) => setTimeout(() => rej(new Error("demorou demais para responder")), PRAZO_MS))]);
+
 async function coletarDaFonte(fonte, termos, comTodas, opcoes) {
-  const tarefas = termos.map((t) => fonte.buscar(t, opcoes));
-  if (comTodas && fonte.todas) tarefas.push(fonte.todas(opcoes));
+  const tarefas = termos.map((t) => comPrazo(fonte.buscar(t, opcoes)));
+  if (comTodas && fonte.todas) tarefas.push(comPrazo(fonte.todas(opcoes)));
   const r = await Promise.allSettled(tarefas);
   const ok = r.filter((x) => x.status === "fulfilled");
   if (!ok.length) throw r[0].reason;
@@ -106,6 +112,10 @@ export async function buscarVagas({ q, uf, cidade, raio = 0, dias, modalidades =
   // senão centenas de remotas recentes empurravam para fora as vagas mais antigas da região.
   const LIMITE = 800;
   const encontradas = vagas.length; // antes do limite: a tela mostra "800 de N"
+  // Descrições muito longas são cortadas na lista (a resposta da função tem limite de tamanho
+  // na Vercel; 6.000 caracteres cobrem a descrição inteira da imensa maioria das vagas).
+  const MAX_DESCRICAO = 6000;
+  const cortar = (v) => (v.descricao?.length > MAX_DESCRICAO ? { ...v, descricao: `${v.descricao.slice(0, MAX_DESCRICAO)}…` } : v);
   if (noLocal) {
     const daRegiao = vagas.filter((v) => v.modalidade !== "remoto").slice(0, LIMITE);
     const remotas = vagas.filter((v) => v.modalidade === "remoto").slice(0, LIMITE - daRegiao.length);
@@ -113,6 +123,8 @@ export async function buscarVagas({ q, uf, cidade, raio = 0, dias, modalidades =
   } else {
     vagas = vagas.slice(0, LIMITE);
   }
+
+  vagas = vagas.map(cortar);
 
   // O total de cada fonte é contado no fim, depois de todos os filtros: assim a soma bate com a lista.
   for (const f of fontes) if (f.ok) f.total = vagas.filter((v) => v.fonte === f.nome).length;
