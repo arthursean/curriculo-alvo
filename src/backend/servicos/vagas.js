@@ -52,6 +52,8 @@ async function coletarDaFonte(fonte, termos, comTodas, opcoes) {
   return ok.flatMap((x) => x.value || []);
 }
 
+const IDADE_MAXIMA_DIAS = 183; // 6 meses
+
 const PALAVRAS_VAZIAS = new Set(["de", "da", "do", "das", "dos", "e", "em", "para", "com", "a", "o", "of", "the", "and"]);
 const palavrasDe = (q) => normalizar(q).split(/[\s,;/]+/).filter((p) => p.length > 1 && !PALAVRAS_VAZIAS.has(p));
 
@@ -96,6 +98,9 @@ async function buscarConjunto({ q, uf, cidade, raio = 0, dias, modalidades = [],
   // Público brasileiro: vaga de fora do país só aparece se for remota.
   vagas = vagas.filter((v) => !v.internacional || v.modalidade === "remoto");
   if (noLocal) vagas = vagas.filter(noLocal);
+  // Vagas com mais de 6 meses não aparecem (muitas são antigas, ainda "abertas" no portal, mas
+  // sem processo seletivo de verdade). Sem data informada, a vaga fica.
+  vagas = vagas.filter((v) => !v.publicadaEm || isNaN(new Date(v.publicadaEm)) || diasDesde(v.publicadaEm) <= IDADE_MAXIMA_DIAS);
   if (dias) vagas = vagas.filter((v) => diasDesde(v.publicadaEm) <= dias);
   if (modalidades.length) vagas = vagas.filter((v) => modalidades.includes(v.modalidade));
   if (niveis.length) vagas = vagas.filter((v) => niveis.includes(v.nivel));

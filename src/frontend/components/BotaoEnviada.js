@@ -38,7 +38,7 @@ export function useCandidaturas() {
   return { enviadas, alternar, erro, carregado };
 }
 
-export default function BotaoEnviada({ enviada, onClick, pequeno = true }) {
+export default function BotaoEnviada({ enviada, onClick, pequeno = true, curto = false }) {
   return (
     <button
       type="button"
@@ -47,7 +47,7 @@ export default function BotaoEnviada({ enviada, onClick, pequeno = true }) {
       onClick={onClick}
       title={enviada ? "Clique para desmarcar" : "Marque quando você se candidatar a esta vaga"}
     >
-      {enviada ? "✓ Candidatura enviada" : "Marcar como enviada"}
+      {enviada ? (curto ? "✓ Enviada" : "✓ Candidatura enviada") : curto ? "Marcar enviada" : "Marcar como enviada"}
     </button>
   );
 }

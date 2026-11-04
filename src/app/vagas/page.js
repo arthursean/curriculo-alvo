@@ -19,7 +19,7 @@ import { useProtegido } from "@/frontend/hooks/useProtegido";
 const RAIOS = [[0, "Só a cidade"], [25, "Até 25 km"], [50, "Até 50 km"], [90, "Até 90 km"], [150, "Até 150 km"], [300, "Até 300 km"]];
 
 const PERIODOS = [
-  [0, "Qualquer data"],
+  [0, "Últimos 6 meses"],
   [1, "Últimas 24 horas"],
   [3, "Últimos 3 dias"],
   [7, "Última semana"],
@@ -37,8 +37,6 @@ function alternar(lista, valor) {
 
 // Versão no nome da chave: buscas salvas por versões antigas (com regras de filtro antigas) são ignoradas.
 const CHAVE_BUSCA = "ca:busca:v3";
-
-const POR_PAGINA = 30;
 
 const faixa = (p) => (p >= 70 ? "alta" : p >= 40 ? "media" : "baixa");
 
@@ -140,8 +138,10 @@ export default function Vagas() {
 
   // Áreas da última busca feita só por área (sem palavra-chave), para não repetir a mesma busca.
   const areasBuscadas = useRef("");
+  const [restaurado, setRestaurado] = useState(false);
 
   useEffect(() => {
+    setRestaurado(true);
     try {
       const ultima = JSON.parse(sessionStorage.getItem(CHAVE_BUSCA) || "null");
       if (ultima) {
@@ -192,7 +192,10 @@ export default function Vagas() {
 
   // Marcar (ou desmarcar) uma área busca de novo, depois de uma pausa curta para dar tempo de
   // marcar mais de uma. Com palavra-chave, a busca continua com ela (a palavra filtra a área).
+  // (Só depois de restaurar a última busca da sessão: antes disso as áreas ainda estão vazias e
+  // a lista restaurada seria apagada.)
   useEffect(() => {
+    if (!restaurado) return;
     const chave = [...areas].sort().join(",");
     if (chave === areasBuscadas.current) return;
     if (!areas.length && !q.trim()) {
@@ -203,7 +206,7 @@ export default function Vagas() {
     const t = setTimeout(() => buscar(), 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [areas]);
+  }, [areas, restaurado]);
 
   async function alternarFavorita(vaga) {
     const era = favoritas.has(vaga.id);
@@ -257,25 +260,56 @@ export default function Vagas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, modalidades, niveis, areas, filtroSalario, ordem, avaliacoes]);
 
-  // 30 vagas por página. Nova busca, outro filtro ou outra ordem voltam para a 1ª página.
+  // Páginas do tamanho da tela: quantas vagas cabem na janela (abaixo do menu, com a paginação)
+  // sem rolar. Medido a partir dos cartões renderizados; refeito a cada busca e ao redimensionar.
+  const [porPagina, setPorPagina] = useState(6);
   const [pagina, setPagina] = useState(1);
   const topoLista = useRef(null);
   useEffect(() => setPagina(1), [vagas, modalidades, niveis, areas, salMin, salMax, semSalario, ordem, aba]);
-  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
+  useEffect(() => {
+    function medir() {
+      const cards = [...document.querySelectorAll("article.vaga:not(.aberta)")];
+      if (!cards.length) return;
+      const alturaCard = cards.reduce((t, c) => t + c.getBoundingClientRect().height, 0) / cards.length + 10; // + espaço entre cartões
+      const menu = document.querySelector(".nav")?.getBoundingClientRect().height || 60;
+      const paginacao = document.querySelector(".paginacao")?.getBoundingClientRect().height || 44;
+      const livre = window.innerHeight - menu - paginacao - 36;
+      const n = Math.max(2, Math.min(15, Math.floor(livre / alturaCard)));
+      setPorPagina((p) => (p === n ? p : n));
+    }
+    const t = setTimeout(medir, 50);
+    window.addEventListener("resize", medir);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", medir);
+    };
+  }, [vagas, aba]);
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / porPagina));
   const paginaAtual = Math.min(pagina, totalPaginas);
-  const visiveis = filtradas.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
+  const visiveis = filtradas.slice((paginaAtual - 1) * porPagina, paginaAtual * porPagina);
+  // Ao trocar de página, a lista sobe até logo abaixo do menu fixo do topo. A rolagem acontece
+  // depois que a nova página aparece (antes disso, o redesenho da lista cancelava a rolagem).
+  const rolarParaLista = useRef(false);
   const mudarPagina = (n) => {
+    rolarParaLista.current = true;
     setPagina(n);
     setAberta(null);
-    topoLista.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  useEffect(() => {
+    if (!rolarParaLista.current) return;
+    rolarParaLista.current = false;
+    const el = topoLista.current;
+    if (!el) return;
+    const menu = document.querySelector(".nav")?.getBoundingClientRect().height || 60;
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - menu - 8 });
+  }, [pagina]);
   const paginacao = (
     <Paginacao
       pagina={paginaAtual}
       totalPaginas={totalPaginas}
       onMudar={mudarPagina}
-      inicio={(paginaAtual - 1) * POR_PAGINA + 1}
-      fim={Math.min(paginaAtual * POR_PAGINA, filtradas.length)}
+      inicio={(paginaAtual - 1) * porPagina + 1}
+      fim={Math.min(paginaAtual * porPagina, filtradas.length)}
       total={filtradas.length}
     />
   );
@@ -459,6 +493,7 @@ export default function Vagas() {
                     {fav ? "★" : "☆"}
                   </button>
                 </div>
+                {estaAberta && (
                 <div className="tags" style={{ marginTop: 8 }}>
                   <span className="tag pri">{MOD_NOME[v.modalidade]}</span>
                   <span className="tag">{NIVEL_NOME[v.nivel]}</span>
@@ -468,6 +503,7 @@ export default function Vagas() {
                   {geradas.has(v.id) && <span className="tag ok">Currículo gerado</span>}
                   {enviadas.has(v.id) && <span className="tag ok">Candidatura enviada</span>}
                 </div>
+                )}
 
                 {estaAberta ? (
                   <div className="stack vaga-detalhe">
@@ -486,19 +522,27 @@ export default function Vagas() {
                 ) : (
                   <>
                     {v.descricao && <p className="desc">{v.descricao}</p>}
-                    <div className="row" style={{ marginTop: v.descricao ? 0 : 10 }}>
-                      <button className="btn sec sm" onClick={() => abrir(v)}>
-                        {perfilOk ? "Ver compatibilidade e descrição ▼" : "Ver descrição completa ▼"}
-                      </button>
-                      <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer" onClick={() => registrarEvento("link", v, { compatibilidade: avaliacoes.get(v.id)?.compatibilidade })}>Ver vaga original ↗</a>
-                      <BotaoEnviada enviada={enviadas.has(v.id)} onClick={() => alternarEnviada(v, av?.compatibilidade)} />
+                    {/* Cartão compacto: etiquetas e ações na mesma linha, para caber mais vagas na tela. */}
+                    <div className="vaga-rodape">
+                      <div className="tags">
+                        <span className="tag pri">{MOD_NOME[v.modalidade]}</span>
+                        {v.nivel !== "nao_informado" && <span className="tag">{NIVEL_NOME[v.nivel]}</span>}
+                        {areasDaVaga(v).map((a) => <span key={a} className="tag">{AREA_NOME[a]}</span>)}
+                        {v.idioma && v.idioma !== "pt" && <span className="tag warn">Em {IDIOMA_NOME[v.idioma]?.toLowerCase()}</span>}
+                        {v.salario && <span className="tag ok">{v.salario}</span>}
+                        {geradas.has(v.id) && <span className="tag ok">Currículo gerado</span>}
+                      </div>
+                      <div className="vaga-acoes">
+                        <button className="btn sec sm" onClick={() => abrir(v)} title={perfilOk ? "Ver compatibilidade e descrição completa" : "Ver descrição completa"}>Detalhes ▼</button>
+                        <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer" onClick={() => registrarEvento("link", v, { compatibilidade: avaliacoes.get(v.id)?.compatibilidade })}>Vaga original ↗</a>
+                        <BotaoEnviada curto enviada={enviadas.has(v.id)} onClick={() => alternarEnviada(v, av?.compatibilidade)} />
+                      </div>
                     </div>
                   </>
                 )}
               </article>
             );
           })}
-          {!(aba === "busca" && carregando) && visiveis.length > 0 && <div style={{ marginTop: 14 }}>{paginacao}</div>}
         </section>
       </div>
     </div>
