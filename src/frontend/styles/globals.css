@@ -381,3 +381,49 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .cv .cv-linha { display: block; }
 .cv .cv-topico { display: block; position: relative; padding-left: 1.1em; text-align: left; }
 .cv .cv-topico::before { content: "•"; position: absolute; left: .2em; }
+
+/* ---- Painel inicial ------------------------------------------------------------------ */
+/* Cor das barras validada para contraste e faixa de luminosidade em cada tema. */
+:root { --grafico: #3550dc; --grafico-ref: #e6e9f0; }
+@media (prefers-color-scheme: dark) { :root { --grafico: #6f84f5; --grafico-ref: #2a3040; } }
+
+.numeros { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) { .numeros { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.numero { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; }
+.numero-valor { font-size: 1.7rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.numero.destaque .numero-valor { font-size: 2.1rem; }
+.numero-rotulo { font-weight: 600; font-size: .9rem; }
+.painel-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.painel-grade > * { margin-top: 0 !important; }
+@media (max-width: 860px) { .painel-grade { grid-template-columns: minmax(0, 1fr); } }
+
+.grafico-topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 32px; }
+.grafico-area { position: relative; height: 170px; margin: 18px 0 0 28px; }
+.grafico-ref { position: absolute; left: 0; right: 0; border-top: 1px solid var(--grafico-ref); }
+.grafico-ref span { position: absolute; right: calc(100% + 6px); top: -.6em; font-size: .72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.grafico-barras { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px; border-bottom: 1px solid var(--border); }
+.grafico-coluna { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; border: 0; padding: 0; background: transparent; cursor: default; border-radius: 4px 4px 0 0; }
+.grafico-coluna:hover, .grafico-coluna.ativa, .grafico-coluna:focus-visible { background: var(--surface-2); outline: none; }
+.grafico-barra { display: block; width: 100%; max-width: 14px; min-height: 3px; background: var(--grafico); border-radius: 4px 4px 0 0; }
+.grafico-eixo { position: absolute; top: calc(100% + 6px); left: 0; right: 0; display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); }
+.grafico { padding-bottom: 22px; }
+.grafico-tabela { max-height: 210px; overflow-y: auto; }
+.grafico-tabela table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.grafico-tabela th, .grafico-tabela td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); }
+.grafico-tabela td:last-child, .grafico-tabela th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+.funil { display: flex; flex-direction: column; gap: 12px; }
+.funil-texto { display: flex; justify-content: space-between; font-size: .92rem; margin-bottom: 4px; }
+.funil-texto strong { font-variant-numeric: tabular-nums; }
+.funil-trilho { height: 10px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.funil-barra { height: 100%; background: var(--grafico); border-radius: 99px; min-width: 2px; }
+
+.lista-painel { list-style: none; margin: 0; padding: 0; }
+.lista-painel li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.lista-painel li:last-child { border-bottom: 0; }
+.lista-painel li > a, .lista-painel li > span:first-child { flex: 1 1 100%; font-weight: 600; }
+.checklist { list-style: none; margin: 0; padding: 0; columns: 2; font-size: .9rem; }
+.checklist li { padding: 3px 0; break-inside: avoid; color: var(--muted); }
+.checklist li.ok { color: var(--text); }
+.checklist li.ok span:first-child { color: var(--ok); }
+@media (max-width: 480px) { .checklist { columns: 1; } }

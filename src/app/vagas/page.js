@@ -7,7 +7,7 @@ import { tempoRelativo } from "@/shared/texto";
 import { IDIOMAS_CV } from "@/shared/traducao";
 import { personalizar } from "@/shared/personalizar";
 import { perfilCompleto } from "@/shared/perfil";
-import { buscarVagas, carregarCurriculos, carregarFavoritos, carregarPerfil, desfavoritar, favoritar } from "@/frontend/lib/api";
+import { buscarVagas, carregarCurriculos, carregarFavoritos, carregarPerfil, desfavoritar, favoritar, registrarEvento } from "@/frontend/lib/api";
 import { guardarVagaAtual } from "@/frontend/lib/navegacao";
 import SeletorLocal from "@/frontend/components/SeletorLocal";
 import ResumoBusca from "@/frontend/components/ResumoBusca";
@@ -121,6 +121,11 @@ export default function Vagas() {
   const [ordem, setOrdem] = useState("compatibilidade");
   const [aberta, setAberta] = useState(null);
   const [filtrosAbertos, setFiltrosAbertos] = useState(false); // só no celular
+  // Abre os detalhes de uma vaga e registra para o painel inicial.
+  const abrir = (v) => {
+    setAberta(v.id);
+    registrarEvento("detalhes", v, { compatibilidade: avaliacoes.get(v.id)?.compatibilidade });
+  };
   const [favoritas, setFavoritas] = useState(null); // Map id -> vaga
   const { dados } = useProtegido(carregar);
   const perfil = dados?.perfil;
@@ -394,7 +399,7 @@ export default function Vagas() {
                       {av ? `${av.compatibilidade}%` : "…"}
                     </div>
                   )}
-                  <button className="vaga-cabecalho" aria-expanded={estaAberta} onClick={() => setAberta(estaAberta ? null : v.id)}>
+                  <button className="vaga-cabecalho" aria-expanded={estaAberta} onClick={() => (estaAberta ? setAberta(null) : abrir(v))}>
                     <h3>{v.titulo}</h3>
                     <div className="muted small">{v.empresa} · {v.local}{v.distanciaKm != null && v.modalidade !== "remoto" ? ` (${v.distanciaKm} km)` : ""} · {tempoRelativo(v.publicadaEm)} · via {v.fonte}</div>
                   </button>
@@ -420,7 +425,7 @@ export default function Vagas() {
                     </div>
                     <div className="row">
                       <button className="btn sm" onClick={() => gerar(v)} disabled={!perfilOk}>{geradas.has(v.id) ? "Ver currículo" : "Gerar currículo para esta vaga"}</button>
-                      <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer">Ver vaga original ↗</a>
+                      <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer" onClick={() => registrarEvento("link", v, { compatibilidade: avaliacoes.get(v.id)?.compatibilidade })}>Ver vaga original ↗</a>
                       <button className="btn ghost sm" onClick={() => setAberta(null)}>Recolher ▲</button>
                     </div>
                   </div>
@@ -428,10 +433,10 @@ export default function Vagas() {
                   <>
                     {v.descricao && <p className="desc">{v.descricao}</p>}
                     <div className="row" style={{ marginTop: v.descricao ? 0 : 10 }}>
-                      <button className="btn sec sm" onClick={() => setAberta(v.id)}>
+                      <button className="btn sec sm" onClick={() => abrir(v)}>
                         {perfilOk ? "Ver compatibilidade e descrição ▼" : "Ver descrição completa ▼"}
                       </button>
-                      <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer">Ver vaga original ↗</a>
+                      <a className="btn sec sm" href={v.url} target="_blank" rel="noopener noreferrer" onClick={() => registrarEvento("link", v, { compatibilidade: avaliacoes.get(v.id)?.compatibilidade })}>Ver vaga original ↗</a>
                     </div>
                   </>
                 )}

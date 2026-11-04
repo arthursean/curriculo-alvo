@@ -95,6 +95,19 @@ const CARGOS_COMPOSTOS = [
   [/\b(?:software|devops|cloud|platform|site reliability|back-?end|front-?end|full ?stack|qa|security|mobile)\s+engineer/, ["tecnologia"]],
 ];
 
+// O termo precisa começar uma palavra ("ux" não casa com "auxiliar", "ui" não casa com "possui").
+// Termos curtos (até 3 letras) precisam ser a palavra inteira; os longos podem ser radical
+// ("advogad" casa "advogado(a)").
+const cacheTermo = new Map();
+function reTermo(termo) {
+  if (!cacheTermo.has(termo)) {
+    const t = termo.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const fim = t.replace(/\\/g, "").length <= 3 ? "(?![a-z0-9])" : "";
+    cacheTermo.set(termo, new RegExp(`(?<![a-z0-9])${t}${fim}`));
+  }
+  return cacheTermo.get(termo);
+}
+
 // Áreas da vaga, da principal para a secundária (no máximo 2). O título pesa mais que a
 // categoria, que pesa mais que o começo da descrição.
 export function classificarAreas(titulo = "", categoria = "", descricao = "") {
@@ -102,9 +115,10 @@ export function classificarAreas(titulo = "", categoria = "", descricao = "") {
   for (const [re, areas] of CARGOS_COMPOSTOS) if (re.test(tt)) return areas;
   const tc = ` ${normalizar(categoria)} `;
   const td = ` ${normalizar(descricao)} `;
+  const tem = (texto, termo) => reTermo(termo).test(texto);
   const pontos = AREAS.map((a) => ({
     id: a.id,
-    p: a.termos.reduce((s, termo) => s + (tt.includes(termo) ? 3 : 0) + (tc.includes(termo) ? 2 : 0) + (td.includes(termo) ? 1 : 0), 0),
+    p: a.termos.reduce((s, termo) => s + (tem(tt, termo) ? 3 : 0) + (tem(tc, termo) ? 2 : 0) + (tem(td, termo) ? 1 : 0), 0),
   }))
     .filter((x) => x.p > 0)
     .sort((a, b) => b.p - a.p);

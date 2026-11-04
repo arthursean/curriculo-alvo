@@ -72,3 +72,20 @@ export async function importarCurriculo(arquivo) {
   if (!res.ok) throw new Error(dados.erro || "Não foi possível ler o arquivo.");
   return dados;
 }
+
+// ---- Painel ---------------------------------------------------------------------------
+export const carregarPainel = async () => (await api("/api/painel")).painel;
+
+// Registra um clique para o painel (vaga aberta, link original, PDF). Usa sendBeacon, que
+// continua enviando mesmo quando a página troca ou abre outra aba; nunca atrapalha a tela.
+export function registrarEvento(tipo, vaga, extra = {}) {
+  try {
+    const { id, titulo, empresa, fonte, area, url } = vaga || {};
+    const corpo = JSON.stringify({ tipo, vaga: { id, titulo, empresa, fonte, area, url, ...extra } });
+    const blob = new Blob([corpo], { type: "application/json" });
+    if (navigator.sendBeacon?.("/api/eventos", blob)) return;
+    fetch("/api/eventos", { method: "POST", headers: { "Content-Type": "application/json" }, body: corpo, keepalive: true }).catch(() => {});
+  } catch {
+    // métrica não é essencial
+  }
+}

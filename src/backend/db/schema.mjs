@@ -60,4 +60,16 @@ export const COMANDOS_SCHEMA = [
     criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (usuario_id, vaga_id)
   )`,
+
+  // Atividade do usuário para o painel inicial (buscas, vagas abertas, links clicados, PDFs).
+  // Só do próprio usuário, apagada junto com a conta; registros com mais de 1 ano são removidos.
+  `CREATE TABLE IF NOT EXISTS eventos (
+    id BIGSERIAL PRIMARY KEY,
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    tipo TEXT NOT NULL,
+    vaga_id TEXT,
+    dados JSONB,
+    criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+  )`,
+  `CREATE INDEX IF NOT EXISTS eventos_usuario_idx ON eventos (usuario_id, criado_em)`,
 ];

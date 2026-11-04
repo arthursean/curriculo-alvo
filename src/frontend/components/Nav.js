@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { sair, usuarioLogado } from "@/frontend/lib/api";
 
 const LINKS = [
+  ["/inicio", "Início"],
   ["/perfil", "Meu perfil"],
   ["/curriculo", "Currículo base"],
   ["/vagas", "Buscar vagas"],

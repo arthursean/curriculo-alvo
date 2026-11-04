@@ -21,3 +21,9 @@ export async function adicionar(usuarioId, vaga) {
 export async function remover(usuarioId, vagaId) {
   await sql`DELETE FROM favoritos WHERE usuario_id = ${usuarioId} AND vaga_id = ${vagaId}`;
 }
+
+export async function recentes(usuarioId, limite = 4) {
+  return sql`
+    SELECT vaga->>'id' AS "vagaId", vaga->>'titulo' AS titulo, vaga->>'empresa' AS empresa, vaga->>'url' AS url, criado_em AS "em"
+    FROM favoritos WHERE usuario_id = ${usuarioId} ORDER BY criado_em DESC LIMIT ${limite}`;
+}

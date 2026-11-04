@@ -8,7 +8,7 @@ import PainelConteudo from "@/frontend/components/PainelConteudo";
 import { personalizar } from "@/shared/personalizar";
 import { detectarIdioma, detectarIdiomaPerfil, IDIOMAS_CV } from "@/shared/traducao";
 import { traduzirCurriculo } from "@/frontend/lib/tradutor";
-import { carregarCurriculos, carregarPerfil, salvarCurriculo, salvarPerfil } from "@/frontend/lib/api";
+import { carregarCurriculos, carregarPerfil, registrarEvento, salvarCurriculo, salvarPerfil } from "@/frontend/lib/api";
 import SeletorVisual from "@/frontend/components/SeletorVisual";
 import { visualValido } from "@/shared/modelos";
 import { lerVagaAtual } from "@/frontend/lib/navegacao";
@@ -158,7 +158,7 @@ function Personalizar() {
           </div>
           <div className="row">
             <a className="btn sec" href={vaga.url} target="_blank" rel="noopener noreferrer">Ver vaga ↗</a>
-            <button className="btn" disabled={!ajuste || traduzindo} onClick={() => window.print()}>Imprimir / PDF</button>
+            <button className="btn" disabled={!ajuste || traduzindo} onClick={() => { registrarEvento("pdf", vaga, { compatibilidade: ajuste?.compatibilidade }); window.print(); }}>Imprimir / PDF</button>
           </div>
         </div>
 

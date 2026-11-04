@@ -3,4 +3,4 @@
 export const COOKIE_SESSAO = "ca_sessao";
 
 // Para onde vai quem já está logado.
-export const PAGINA_INICIAL_LOGADO = "/vagas";
+export const PAGINA_INICIAL_LOGADO = "/inicio";
