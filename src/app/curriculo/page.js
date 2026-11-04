@@ -8,6 +8,8 @@ import { useProtegido } from "@/frontend/hooks/useProtegido";
 import { perfilCompleto } from "@/shared/perfil";
 import { estavel } from "@/shared/texto";
 import { detectarIdiomaPerfil } from "@/shared/traducao";
+import { visualValido } from "@/shared/modelos";
+import SeletorVisual from "@/frontend/components/SeletorVisual";
 
 export default function CurriculoBase() {
   const { dados, erro: erroCarga } = useProtegido(carregarPerfil);
@@ -19,13 +21,14 @@ export default function CurriculoBase() {
   if (!perfil) return <div className="vazio">Carregando…</div>;
 
   // A formatação vale só para o conteúdo em que foi feita: mudou o perfil, ela é ignorada.
-  const { edicaoBase, ...conteudo } = perfil;
+  // (O visual — modelo e cor — não entra: trocar de modelo mantém a formatação.)
+  const { edicaoBase, visual, ...conteudo } = perfil;
   const assinatura = estavel(conteudo);
   const htmlSalvo = edicaoBase?.assinatura === assinatura ? edicaoBase.html : null;
 
-  // A formatação do currículo base fica guardada junto do perfil.
-  async function guardarEdicao(edicaoBase) {
-    const novo = { ...perfil, edicaoBase };
+  // A formatação e o visual do currículo ficam guardados junto do perfil.
+  async function guardar(mudanca) {
+    const novo = { ...perfil, ...mudanca };
     setPerfil(novo);
     try {
       await salvarPerfil(novo);
@@ -50,10 +53,12 @@ export default function CurriculoBase() {
         <div className="alerta nao-imprimir">Seu perfil ainda está vazio. <Link href="/perfil">Preencha o perfil</Link> para montar o currículo.</div>
       )}
       {erro && <div className="alerta nao-imprimir">{erro}</div>}
+      <SeletorVisual {...visualValido(visual)} onChange={(v) => guardar({ visual: v })} />
       <CurriculoEditavel
+        visual={visual}
         htmlSalvo={htmlSalvo}
-        onSalvar={(html) => guardarEdicao({ html, assinatura, em: new Date().toISOString() })}
-        onDescartar={() => guardarEdicao(null)}
+        onSalvar={(html) => guardar({ edicaoBase: { html, assinatura, em: new Date().toISOString() } })}
+        onDescartar={() => guardar({ edicaoBase: null })}
       >
         <Curriculo perfil={perfil} idioma={detectarIdiomaPerfil(perfil)} />
       </CurriculoEditavel>

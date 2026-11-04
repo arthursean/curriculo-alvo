@@ -3,8 +3,11 @@ import { useId, useMemo, useRef, useState } from "react";
 import { normalizar } from "@/shared/texto";
 
 // Campo com sugestões: a lista fica escondida e aparece filtrada conforme a digitação.
-// Setas ↑/↓ navegam, Enter escolhe, Esc fecha. Texto fora da lista também é aceito.
-export default function Autocompletar({ valor, onChange, opcoes, placeholder, style }) {
+// Setas ↑/↓ navegam, Enter escolhe, Esc fecha. Texto fora da lista é aceito, a não ser com
+// `restrito`: aí, ao sair do campo, só fica um valor da lista (ex.: "rwcife" não passa como cidade).
+const MAX_SUGESTOES = 80;
+
+export default function Autocompletar({ valor, onChange, opcoes, placeholder, style, restrito = false, disabled = false, id }) {
   const [aberto, setAberto] = useState(false);
   const [ativo, setAtivo] = useState(0);
   const listaId = useId();
@@ -17,6 +20,15 @@ export default function Autocompletar({ valor, onChange, opcoes, placeholder, st
     const contem = opcoes.filter((o) => !comeca.includes(o) && normalizar(o).includes(t));
     return [...comeca, ...contem];
   }, [valor, opcoes]);
+  const visiveis = filtradas.slice(0, MAX_SUGESTOES);
+
+  // Modo restrito: ao sair, troca o texto pela opção igual (ignorando acento/maiúscula) ou limpa.
+  function validar() {
+    setAberto(false);
+    if (!restrito || !valor) return;
+    const igual = opcoes.find((o) => normalizar(o) === normalizar(valor).trim());
+    if (igual !== valor) onChange(igual || "");
+  }
 
   function escolher(opcao) {
     onChange(opcao);
@@ -27,14 +39,14 @@ export default function Autocompletar({ valor, onChange, opcoes, placeholder, st
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       if (!aberto) return setAberto(true);
-      const n = filtradas.length;
+      const n = visiveis.length;
       if (!n) return;
       const prox = (ativo + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
       setAtivo(prox);
       lista.current?.children[prox]?.scrollIntoView({ block: "nearest" });
-    } else if (e.key === "Enter" && aberto && filtradas[ativo]) {
+    } else if (e.key === "Enter" && aberto && visiveis[ativo]) {
       e.preventDefault();
-      escolher(filtradas[ativo]);
+      escolher(visiveis[ativo]);
     } else if (e.key === "Escape") {
       setAberto(false);
     }
@@ -43,6 +55,8 @@ export default function Autocompletar({ valor, onChange, opcoes, placeholder, st
   return (
     <div className="autocompletar" style={style}>
       <input
+        id={id}
+        disabled={disabled}
         role="combobox"
         aria-expanded={aberto}
         aria-controls={listaId}
@@ -56,12 +70,12 @@ export default function Autocompletar({ valor, onChange, opcoes, placeholder, st
           setAberto(true);
         }}
         onFocus={() => setAberto(true)}
-        onBlur={() => setAberto(false)}
+        onBlur={validar}
         onKeyDown={teclas}
       />
-      {aberto && filtradas.length > 0 && (
+      {aberto && visiveis.length > 0 && (
         <ul id={listaId} role="listbox" ref={lista} className="sugestoes">
-          {filtradas.map((o, i) => (
+          {visiveis.map((o, i) => (
             <li
               key={o}
               role="option"

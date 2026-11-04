@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  serverExternalPackages: ["pdfjs-dist", "mammoth"],
   async headers() {
     return [
       {

@@ -30,10 +30,14 @@ export default function Nav() {
     <nav className="nav">
       <div className="nav-inner">
         <Link href="/" className="logo">Currículo<span>Alvo</span></Link>
-        {usuario && LINKS.map(([href, nome]) => (
-          <Link key={href} href={href} className={`link ${path.startsWith(href) ? "ativo" : ""}`}>{nome}</Link>
-        ))}
-        <div style={{ marginLeft: "auto" }} className="row">
+        {usuario && (
+          <div className="nav-links">
+            {LINKS.map(([href, nome]) => (
+              <Link key={href} href={href} className={`link ${path.startsWith(href) ? "ativo" : ""}`}>{nome}</Link>
+            ))}
+          </div>
+        )}
+        <div className="row nav-conta">
           {usuario === null && (
             <>
               <Link href="/entrar" className="link">Entrar</Link>

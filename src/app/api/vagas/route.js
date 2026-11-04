@@ -7,7 +7,9 @@ export const GET = rota(async (req) => {
   const p = new URL(req.url).searchParams;
   return json(await buscarVagas({
     q: p.get("q"),
-    local: (p.get("local") || "").trim(),
+    uf: (p.get("uf") || "").trim(),
+    cidade: (p.get("cidade") || "").trim(),
+    raio: Number(p.get("raio")) || 0,
     dias: Number(p.get("dias")) || 0,
     modalidades: p.getAll("modalidade"),
     niveis: p.getAll("nivel"),

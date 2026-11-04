@@ -8,7 +8,9 @@ import PainelConteudo from "@/frontend/components/PainelConteudo";
 import { personalizar } from "@/shared/personalizar";
 import { detectarIdioma, detectarIdiomaPerfil, IDIOMAS_CV } from "@/shared/traducao";
 import { traduzirCurriculo } from "@/frontend/lib/tradutor";
-import { carregarCurriculos, carregarPerfil, salvarCurriculo } from "@/frontend/lib/api";
+import { carregarCurriculos, carregarPerfil, salvarCurriculo, salvarPerfil } from "@/frontend/lib/api";
+import SeletorVisual from "@/frontend/components/SeletorVisual";
+import { visualValido } from "@/shared/modelos";
 import { lerVagaAtual } from "@/frontend/lib/navegacao";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
 import { perfilCompleto } from "@/shared/perfil";
@@ -44,6 +46,14 @@ function Personalizar() {
   const [edicao, setEdicao] = useState(null);
   // Suas escolhas de + / − para esta vaga: { experiencias: { id: true|false }, ... }
   const [escolhas, setEscolhas] = useState({});
+  // Modelo e cor do currículo: escolha do perfil, vale para todos os currículos.
+  const [visual, setVisual] = useState(null);
+  useEffect(() => { if (dados) setVisual(visualValido(dados.perfil.visual)); }, [dados]);
+
+  function mudarVisual(v) {
+    setVisual(v);
+    salvarPerfil({ ...dados.perfil, visual: v }).catch((e) => setErro(`Não foi possível salvar o visual: ${e.message}`));
+  }
 
   function salvar(v, aj, tr, ed) {
     setSalvo(false);
@@ -235,7 +245,12 @@ function Personalizar() {
       )}
 
       {ajuste && (
+        <SeletorVisual {...visualValido(visual)} onChange={mudarVisual} />
+      )}
+
+      {ajuste && (
         <CurriculoEditavel
+          visual={visual}
           key={`${exibido.idioma}-${assinatura(exibido)}`}
           // A formatação vale só para o mesmo conteúdo e idioma em que foi feita.
           htmlSalvo={edicao?.idioma === exibido.idioma && edicao?.assinatura === assinatura(exibido) ? edicao.html : null}

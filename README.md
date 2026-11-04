@@ -3,9 +3,10 @@
 Site para criar seu perfil profissional, gerar um currículo base, buscar vagas-alvo com filtros e gerar um currículo personalizado para cada vaga escolhida, com contas de usuário seguras.
 
 - **Contas** (`/cadastrar`, `/entrar`, `/esqueci-senha`, `/conta`): senha com hash scrypt, sessão em cookie HttpOnly, recuperação de senha por e-mail, troca de senha e exclusão da conta.
-- **Perfil** (`/perfil`): dados pessoais, resumo, competências, experiências, projetos (opcional), formação, idiomas e certificações, salvos na conta.
-- **Currículo base** (`/curriculo`): pronto para imprimir ou salvar em PDF.
-- **Busca de vagas** (`/vagas`): palavras-chave, cidade e data de publicação; filtros de modalidade (remoto, híbrido, presencial), nível do cargo e área.
+- **Perfil** (`/perfil`): dados pessoais, resumo, competências, experiências, projetos (opcional), formação, idiomas e certificações, salvos na conta. Estado e cidade vêm de listas fixas.
+- **Importar currículo (beta):** lê um PDF com texto, DOCX ou TXT (até 3 MB) e preenche o perfil depois que o usuário revisa. O arquivo não fica salvo.
+- **Currículo base** (`/curriculo`): pronto para imprimir ou salvar em PDF, em 5 modelos visuais com cor secundária à escolha.
+- **Busca de vagas** (`/vagas`): palavras-chave ou só a área, estado, cidade com raio em km (vagas remotas sempre aparecem) e data de publicação; filtros de modalidade (remoto, híbrido, presencial), nível do cargo, área e faixa salarial. Um resumo mostra o que as vagas mais pedem e dicas sobre o que falta no perfil.
 - **Currículo por vaga** (`/personalizar`): algoritmo próprio, sem IA paga, que mostra compatibilidade, o que você atende, lacunas e dicas.
 - **Edição do currículo:** antes do PDF, dá para editar o texto e a formatação (negrito, itálico, sublinhado, listas) direto na folha. A versão editada fica salva e pode ser descartada.
 - **Currículos salvos** (`/meus-curriculos`).
@@ -70,8 +71,13 @@ InHire não tem busca geral de vagas: cada empresa tem a sua página própria (`
 | Gupy | não precisa | Vagas do Brasil (API pública do portal, não oficial) |
 | Sólides | não precisa | Vagas do Brasil (API pública do portal, não oficial; máx. 25 por página) |
 | Adzuna | `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Opcional, vagas do Brasil |
+| Trampos.co | não precisa | Vagas do Brasil (API pública; só as mais recentes, sem descrição) |
 | Remotive | não precisa | Vagas remotas internacionais |
 | Arbeitnow | não precisa | Vagas internacionais |
+
+Catho, Vagas.com e LinkedIn não têm API pública de busca de vagas. A API do InfoJobs atende só a Espanha.
+
+A lista de municípios e coordenadas (para o raio) vem de [kelvins/municipios-brasileiros](https://github.com/kelvins/municipios-brasileiros) (licença MIT).
 
 ## Stack
 

@@ -15,7 +15,7 @@ function Cadastrar() {
   return (
     <FormConta
       titulo="Criar conta"
-      subtitulo="Grátis. Sua senha é guardada com hash, nunca em texto."
+      subtitulo="É grátis."
       campos={[
         { nome: "nome", rotulo: "Nome", autocomplete: "name" },
         { nome: "email", rotulo: "E-mail", tipo: "email", autocomplete: "email" },

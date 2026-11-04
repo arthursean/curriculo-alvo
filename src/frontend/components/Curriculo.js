@@ -77,7 +77,8 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
   const experiencias = ajuste?.experiencias || perfil.experiencias;
   const formacao = ajuste?.formacao || perfil.formacao;
   const projetos = (ajuste?.projetos || perfil.projetos || []).filter((p) => p.nome?.trim() || p.descricao?.trim());
-  const contato = [perfil.telefone, perfil.email, perfil.linkedin, perfil.site, perfil.cidade].filter(Boolean);
+  // Cidade vem como "Cidade, UF" (ou ", UF" se só o estado foi escolhido).
+  const contato = [perfil.telefone, perfil.email, perfil.linkedin, perfil.site, (perfil.cidade || "").replace(/^,\s*/, "")].filter(Boolean);
 
   // Hard skills: ferramentas e técnicas + idiomas ("Inglês fluente"), numa linha só.
   const idiomas = perfil.idiomas.filter((i) => i.idioma).map((i) => `${r.nomeIdioma(i.idioma)} ${(r.nivel[i.nivel] || i.nivel).toLowerCase()}`);
@@ -85,14 +86,18 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
   // Soft skills: o texto escrito no perfil; se não houver, as competências comportamentais da lista.
   const soft = perfil.softSkills?.trim() || competencias.filter(ehSoftSkill).join(" | ");
 
+  // Duas colunas lógicas: a principal (resumo, experiência, projetos, formação) e a lateral
+  // (skills e certificações). Cada modelo visual decide se ficam uma embaixo da outra ou lado a lado.
   return (
     <article className="cv" lang={idioma}>
-      <header>
+      <header className="cv-topo">
         <h1>{perfil.nome || r.seuNome}</h1>
         <hr />
         {contato.length > 0 && <Contato itens={contato} />}
       </header>
 
+      <div className="cv-corpo">
+      <div className="cv-principal">
       {resumo && <p className="cv-resumo">{resumo}</p>}
 
       {experiencias.length > 0 && (
@@ -126,11 +131,13 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
           ))}
         </section>
       )}
+      </div>
 
+      <div className="cv-lateral">
       {hard.length > 0 && (
         <section>
           <h2>{r.hardSkills}</h2>
-          <p className="cv-hard">{hard.join(" | ")}</p>
+          <p className="cv-hard">{hard.map((h, i) => <span key={h}>{i > 0 && <span className="cv-sep"> | </span>}{h}</span>)}</p>
         </section>
       )}
 
@@ -147,6 +154,8 @@ export default function Curriculo({ perfil, ajuste, idioma = "pt" }) {
           <p className="cv-item-texto">{perfil.certificacoes.join(" | ")}</p>
         </section>
       )}
+      </div>
+      </div>
     </article>
   );
 }

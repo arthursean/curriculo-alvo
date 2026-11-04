@@ -136,6 +136,15 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 .chip.fora { background: var(--surface); color: var(--muted); text-decoration: line-through; }
 .chip em { font-style: normal; opacity: .75; }
 
+/* Resumo da busca */
+.resumo-busca { margin-bottom: 12px; }
+.resumo-cabecalho { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; width: 100%; text-align: left; }
+.dicas-busca { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* Estado + cidade */
+.seletor-local { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(160px, 1.4fr); gap: 8px; }
+@media (max-width: 480px) { .seletor-local { grid-template-columns: 1fr; } }
+
 /* Mês e ano */
 .mes-ano { display: grid; grid-template-columns: 1fr 1.2fr; gap: 6px; }
 .mes-ano select:disabled { opacity: .5; }
@@ -152,7 +161,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
 
 /* Busca de vagas */
 .busca-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 860px) { .busca-layout { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { .busca-layout { grid-template-columns: minmax(0, 1fr); } }
+.busca-layout > *, .filtros fieldset { min-width: 0; }
 .filtros fieldset { border: 0; padding: 0; margin: 0 0 18px; }
 .filtros legend { font-weight: 700; font-size: .8rem; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .filtros .check { display: flex; margin-bottom: 6px; }
@@ -200,13 +210,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
   font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; font-size: 10pt; line-height: 1.3;
 }
 @media (max-width: 600px) { .cv { padding: 14mm 6mm; min-height: 0; } }
-.cv h1 { font-size: 20pt; font-weight: normal; color: #0C343D; text-align: center; margin: 0; line-height: 1.2; }
+.cv h1 { font-size: 20pt; font-weight: normal; color: var(--cv-cor, #0C343D); text-align: center; margin: 0; line-height: 1.2; }
 .cv hr { border: 0; border-top: 1px solid #a9b5b8; margin: 12pt 0 8pt; }
 .cv .cv-contato { font-size: 8pt; text-align: center; margin: 0; }
 .cv a { color: #1155CC; text-decoration: underline; }
 .cv .cv-resumo { font-size: 10pt; text-align: justify; margin: 14pt 0 0; white-space: pre-line; }
 .cv section { margin-top: 20pt; }
-.cv h2 { font-family: Verdana, Geneva, "DejaVu Sans", sans-serif; font-weight: bold; font-size: 14pt; color: #0C343D; text-transform: uppercase; margin: 0 0 23pt; }
+.cv h2 { font-family: Verdana, Geneva, "DejaVu Sans", sans-serif; font-weight: bold; font-size: 14pt; color: var(--cv-cor, #0C343D); text-transform: uppercase; margin: 0 0 23pt; }
 .cv .cv-item { margin-bottom: 14pt; break-inside: avoid; }
 .cv .cv-item-titulo { font-size: 10pt; text-transform: uppercase; margin: 0 0 4pt; }
 .cv .cv-item-sub { font-size: 9pt; text-transform: uppercase; margin: 0 0 4pt; }
@@ -222,4 +232,134 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary-sof
   .container { padding: 0; max-width: none; }
   .cv, .cv-editando .cv { box-shadow: none; width: 100%; min-height: 0; }
   .cv a { color: #1155CC; }
+}
+
+/* ---- Modelos visuais do currículo ------------------------------------------------------
+   O conteúdo é o mesmo em todos; .tema-<id> no contêiner muda só o visual.
+   --cv-cor é a cor secundária escolhida pelo usuário. */
+.cv-tema { --cv-cor: #0C343D; }
+.cv-tema .cv { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.cv .cv-corpo { display: flex; flex-direction: column; }
+
+/* Moderno: nome à esquerda, coluna lateral com as skills */
+.tema-moderno .cv h1 { text-align: left; font-weight: bold; }
+.tema-moderno .cv hr { border-top: 3px solid var(--cv-cor); width: 60px; margin: 8pt 0; }
+.tema-moderno .cv .cv-contato { text-align: left; }
+.tema-moderno .cv .cv-corpo { display: grid; grid-template-columns: 1fr 30%; gap: 0 18pt; align-items: start; }
+.tema-moderno .cv .cv-lateral { background: color-mix(in srgb, var(--cv-cor) 8%, white); padding: 4pt 12pt 12pt; border-radius: 4pt; margin-top: 14pt; }
+.tema-moderno .cv h2 { font-family: inherit; font-size: 11pt; letter-spacing: .08em; margin: 0 0 10pt; padding-bottom: 3pt; border-bottom: 1.5pt solid var(--cv-cor); }
+.tema-moderno .cv .cv-item-titulo { font-weight: bold; text-transform: none; }
+.tema-moderno .cv .cv-item-texto { margin-top: 4pt; }
+.tema-moderno .cv .cv-hard { font-size: 10pt; }
+.tema-moderno .cv .cv-hard .cv-sep { display: none; }
+.tema-moderno .cv .cv-hard > span { display: block; padding: 2pt 0; }
+.tema-moderno .cv .cv-soft { font-size: 10pt; text-align: left; }
+
+/* Minimalista: serifado, tudo escuro, linhas finas na cor */
+.tema-minimalista .cv { font-family: Georgia, "Times New Roman", serif; }
+.tema-minimalista .cv h1 { text-align: left; font-size: 24pt; color: #111; letter-spacing: .02em; }
+.tema-minimalista .cv hr { border-top: 1px solid var(--cv-cor); }
+.tema-minimalista .cv .cv-contato { text-align: left; font-size: 9pt; color: #444; }
+.tema-minimalista .cv h2 { font-family: inherit; font-weight: normal; font-variant: small-caps; text-transform: none; font-size: 13pt; letter-spacing: .1em; color: var(--cv-cor); margin: 0 0 10pt; padding-bottom: 2pt; border-bottom: .5pt solid #ccc; }
+.tema-minimalista .cv .cv-item-titulo { text-transform: none; font-style: italic; }
+.tema-minimalista .cv .cv-item-texto { margin-top: 4pt; }
+.tema-minimalista .cv .cv-hard { font-size: 10.5pt; }
+
+/* Executivo: faixa colorida no topo com o nome em branco, títulos com marcador lateral */
+.tema-executivo .cv { padding-top: 0; }
+.tema-executivo .cv .cv-topo { background: var(--cv-cor); color: #fff; margin: 0 -8mm; padding: 16mm 8mm 10pt; }
+.tema-executivo .cv h1 { color: #fff; text-align: left; font-weight: bold; }
+.tema-executivo .cv hr { border-top: 1px solid rgba(255,255,255,.4); }
+.tema-executivo .cv .cv-contato { text-align: left; color: #fff; }
+.tema-executivo .cv .cv-contato a { color: #fff; }
+.tema-executivo .cv h2 { font-family: inherit; font-size: 12pt; border-left: 4pt solid var(--cv-cor); padding-left: 8pt; margin: 0 0 12pt; letter-spacing: .05em; }
+.tema-executivo .cv .cv-item-titulo { font-weight: bold; }
+.tema-executivo .cv .cv-item-texto { margin-top: 6pt; }
+
+/* Compacto: letras e espaços menores para caber mais em uma página */
+.tema-compacto .cv { padding-top: 14mm; font-size: 9pt; line-height: 1.25; }
+.tema-compacto .cv h1 { font-size: 16pt; text-align: left; font-weight: bold; }
+.tema-compacto .cv hr { margin: 6pt 0 4pt; border-top-color: var(--cv-cor); }
+.tema-compacto .cv .cv-contato { text-align: left; }
+.tema-compacto .cv .cv-resumo, .tema-compacto .cv .cv-item-texto { font-size: 9pt; margin-top: 6pt; }
+.tema-compacto .cv section { margin-top: 10pt; }
+.tema-compacto .cv h2 { font-family: inherit; font-size: 10.5pt; margin: 0 0 6pt; border-bottom: 1px solid var(--cv-cor); padding-bottom: 1pt; }
+.tema-compacto .cv .cv-item { margin-bottom: 8pt; }
+.tema-compacto .cv .cv-item-titulo { font-size: 9pt; font-weight: bold; margin: 0; }
+.tema-compacto .cv .cv-item-texto { margin-top: 2pt; }
+.tema-compacto .cv .cv-hard { font-size: 9.5pt; }
+.tema-compacto .cv .cv-soft { font-size: 9pt; }
+
+/* ---- Escolha do visual: prévias sem dados (só o desenho do modelo) ---------------------- */
+.seletor-visual { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.opcao-modelo { border: 2px solid var(--border); border-radius: 10px; padding: 8px; background: var(--surface); cursor: pointer; text-align: center; font: inherit; width: auto; color: var(--text); }
+.opcao-modelo.ativa { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.opcao-modelo .nome-modelo { font-weight: 600; font-size: .85rem; margin-top: 6px; display: block; }
+.mini { --cv-cor: #0C343D; background: #fff; aspect-ratio: 210 / 297; border-radius: 3px; box-shadow: 0 1px 4px rgba(0,0,0,.15); padding: 9% 8%; display: flex; flex-direction: column; gap: 5%; overflow: hidden; }
+.mini i { display: block; height: 3px; background: #c9cdd6; border-radius: 2px; }
+.mini .m-nome { height: 6px; width: 55%; background: var(--cv-cor); margin: 0 auto; }
+.mini .m-linha { height: 1px; background: #c9cdd6; }
+.mini .m-titulo { height: 4px; width: 35%; background: var(--cv-cor); }
+.mini .m-curta { width: 70%; }
+.mini .m-corpo { display: flex; flex-direction: column; gap: 4px; }
+.mini .m-colunas { display: grid; grid-template-columns: 1fr 34%; gap: 6px; flex: 1; }
+.mini .m-lado { background: color-mix(in srgb, var(--cv-cor) 12%, white); border-radius: 2px; padding: 4px; display: flex; flex-direction: column; gap: 4px; }
+.mini.tema-moderno .m-nome, .mini.tema-executivo .m-nome, .mini.tema-compacto .m-nome, .mini.tema-minimalista .m-nome { margin: 0; }
+.mini.tema-minimalista .m-nome { background: #333; }
+.mini.tema-minimalista .m-linha { background: var(--cv-cor); }
+.mini.tema-executivo .m-faixa { background: var(--cv-cor); margin: -10% -9% 4%; padding: 10% 9% 6%; display: flex; flex-direction: column; gap: 4px; }
+.mini.tema-executivo .m-faixa .m-nome { background: #fff; }
+.mini.tema-executivo .m-faixa i:not(.m-nome) { background: rgba(255,255,255,.6); }
+.mini.tema-executivo .m-titulo { border-left: 3px solid var(--cv-cor); background: #9aa3b3; }
+.mini.tema-compacto { gap: 3%; padding-top: 6%; }
+.mini.tema-compacto i { height: 2px; }
+.cores { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cor { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--border); cursor: pointer; padding: 0; }
+.cor.ativa { box-shadow: 0 0 0 3px var(--primary); }
+.cores input[type=color] { width: 36px; height: 30px; padding: 0 2px; border-radius: 6px; cursor: pointer; }
+
+/* ---- Currículo em telas pequenas: a folha A4 é reduzida para caber (zoom), sem rolar de lado ---- */
+.cv-palco { width: 100%; overflow-x: hidden; }
+.cv-palco > .cv-tema { zoom: var(--escala, 1); }
+@media print { .cv-palco > .cv-tema { zoom: 1 !important; } }
+
+/* Importar currículo (beta) */
+.selo-beta { display: inline-block; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; padding: 2px 7px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); vertical-align: middle; margin-left: 6px; }
+.revisao-importar { border-top: 1px solid var(--border); padding-top: 12px; }
+.revisao-importar ul { margin: 0; padding-left: 20px; }
+.revisao-importar li { margin: 2px 0; }
+
+/* Navegação: links agrupados (no celular vão para uma segunda linha rolável) */
+.nav-links { display: flex; gap: 4px; }
+.nav-conta { margin-left: auto; flex-wrap: nowrap; }
+.filtros-alternar { display: none; width: 100%; justify-content: space-between; }
+
+/* Celular */
+@media (max-width: 860px) {
+  .filtros-alternar { display: flex; }
+  .filtros:not(.aberto) .filtros-corpo { display: none; }
+  .filtros.aberto .filtros-alternar { margin-bottom: 14px; }
+  .filtros { padding: 12px; }
+}
+@media (max-width: 700px) {
+  .container { padding: 16px 12px 48px; }
+  .card { padding: 14px; }
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1.1rem; }
+  /* 16px evita o zoom automático do iOS ao focar um campo */
+  input, select, textarea { font-size: 16px; }
+  .nav-inner { flex-wrap: wrap; height: auto; padding: 8px 12px 0; overflow: visible; row-gap: 0; }
+  .nav-links { order: 3; width: 100%; overflow-x: auto; padding: 6px 0 8px; scrollbar-width: none; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav a.link { padding: 6px 10px; font-size: .92rem; }
+  .row.between { gap: 10px; }
+  .row > .btn { flex: 0 1 auto; }
+  .btn { min-height: 40px; }
+  .btn.sm { min-height: 34px; }
+}
+@media (max-width: 700px) {
+  /* Prévias dos modelos numa faixa rolável na horizontal, em vez de ocupar a tela toda */
+  .seletor-visual { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 92px; overflow-x: auto; padding-bottom: 6px; }
+  .opcao-modelo { padding: 6px; }
+  .opcao-modelo .nome-modelo { font-size: .78rem; }
 }

@@ -4,6 +4,8 @@ import Link from "next/link";
 import TagInput from "@/frontend/components/TagInput";
 import MesAno from "@/frontend/components/MesAno";
 import Autocompletar from "@/frontend/components/Autocompletar";
+import SeletorLocal from "@/frontend/components/SeletorLocal";
+import ImportarCurriculo from "@/frontend/components/ImportarCurriculo";
 import { IDIOMAS } from "@/shared/idiomas";
 import { carregarPerfil, salvarPerfil } from "@/frontend/lib/api";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
@@ -11,6 +13,12 @@ import { novoId, perfilVazio } from "@/shared/perfil";
 
 const NIVEIS_IDIOMA = ["Básico", "Intermediário", "Avançado", "Fluente", "Nativo"];
 const STATUS_FORMACAO = ["Concluído", "Em andamento", "Trancado"];
+
+// "Recife, PE" -> { cidade: "Recife", uf: "PE" }; textos antigos livres viram estado vazio.
+function localDoPerfil(texto = "") {
+  const m = String(texto).match(/^(.*),\s*([A-Z]{2})$/);
+  return m ? { cidade: m[1].trim(), uf: m[2] } : { cidade: "", uf: "" };
+}
 
 function Campo({ rotulo, children }) {
   return <div><label>{rotulo}</label>{children}</div>;
@@ -71,6 +79,8 @@ export default function Perfil() {
         <Link href="/curriculo" className="btn">Ver currículo base →</Link>
       </div>
 
+      <ImportarCurriculo perfil={perfil} onAplicar={setPerfil} />
+
       <section className="card stack">
         <h2>Dados pessoais</h2>
         <div className="grid-2">
@@ -78,7 +88,15 @@ export default function Perfil() {
           <Campo rotulo="Título profissional"><input value={perfil.titulo} onChange={set("titulo")} placeholder="Analista de Dados" /></Campo>
           <Campo rotulo="E-mail"><input type="email" value={perfil.email} onChange={set("email")} /></Campo>
           <Campo rotulo="Telefone"><input type="tel" value={perfil.telefone} onChange={set("telefone")} placeholder="(11) 99999-0000" /></Campo>
-          <Campo rotulo="Cidade / Estado"><input value={perfil.cidade} onChange={set("cidade")} placeholder="São Paulo, SP" /></Campo>
+          <div style={{ gridColumn: "1 / -1" }}>
+            {/* Guardado como "Cidade, UF" (é como aparece no currículo). */}
+            <SeletorLocal
+              obrigatorioCidade
+              uf={localDoPerfil(perfil.cidade).uf}
+              cidade={localDoPerfil(perfil.cidade).cidade}
+              onChange={({ uf, cidade }) => setPerfil((p) => ({ ...p, cidade: cidade ? `${cidade}, ${uf}` : uf ? `, ${uf}` : "" }))}
+            />
+          </div>
           <Campo rotulo="LinkedIn"><input value={perfil.linkedin} onChange={set("linkedin")} placeholder="linkedin.com/in/seu-nome" /></Campo>
           <Campo rotulo="Site / portfólio"><input value={perfil.site} onChange={set("site")} /></Campo>
         </div>

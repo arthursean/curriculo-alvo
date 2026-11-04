@@ -374,6 +374,16 @@ export function personalizar(perfil, vaga, escolhas = {}) {
   // Categorias genéricas ("Jurídico", "Finanças") contam na compatibilidade, mas não ajudam como lacuna.
   const listaLacunas = faltando.filter((t) => !t.amplo).map((t) => t.nome);
 
+  // Requisitos da vaga e a sua situação em cada um (para o resumo de "o que essas vagas pedem").
+  // tem: "sim" (direto ou implícito), "parecido" ou "nao". Categorias genéricas ficam de fora.
+  const requisitos = termos
+    .filter((t) => !t.amplo && !t.categoria)
+    .map((t) => ({
+      nome: t.nome,
+      tem: t.tipo === "falta" ? "nao" : t.tipo === "parecido" ? "parecido" : "sim",
+      via: t.via ? exibir(t.via) : null,
+    }));
+
   // Idiomas exigidos.
   const dicas = [];
   const textoVaga = `${vaga.titulo}\n${vaga.descricao}`;
@@ -386,6 +396,7 @@ export function personalizar(perfil, vaga, escolhas = {}) {
     } else if (NIVEL_IDIOMA[meu.nivel] >= 3) {
       listaAtendidos.push(`${nome} ${meu.nivel.toLowerCase()}`);
     }
+    requisitos.push({ nome, tem: !meu ? "nao" : NIVEL_IDIOMA[meu.nivel] >= 3 ? "sim" : "parecido", via: meu ? `${meu.idioma} ${meu.nivel.toLowerCase()}` : null });
   }
 
   // ---- Dicas ----------------------------------------------------------------------------
@@ -473,6 +484,7 @@ export function personalizar(perfil, vaga, escolhas = {}) {
     escolhas,
     compatibilidade: Math.max(0, Math.min(100, compatibilidade)),
     atendidos: listaAtendidos,
+    requisitos,
     relacionados: parecidos.map((t) => `${t.nome} (você tem ${exibir(t.via)})`),
     lacunas: listaLacunas.slice(0, 10),
     dicas,

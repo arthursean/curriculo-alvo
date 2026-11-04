@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { sanitizarHtml } from "@/frontend/lib/sanitizar";
+import { visualValido } from "@/shared/modelos";
 
 const ACOES = [
   { cmd: "bold", rotulo: <strong>N</strong>, titulo: "Negrito (Ctrl+B)" },
@@ -15,13 +16,30 @@ const ACOES = [
 // que você escolheu incluir na vaga: digitar, apagar, colar e arrastar ficam bloqueados.
 const PERMITIDO = /^(format(Bold|Italic|Underline|RemoveFormat)|history(Undo|Redo))$/;
 
-// Mostra o currículo gerado (children) ou a versão formatada por você (htmlSalvo).
-export default function CurriculoEditavel({ children, htmlSalvo, onSalvar, onDescartar }) {
+// Largura da folha A4 em px (210 mm a 96 dpi): em telas menores a folha é reduzida para caber.
+const LARGURA_A4 = 794;
+
+// Mostra o currículo gerado (children) ou a versão formatada por você (htmlSalvo), no modelo
+// visual e na cor escolhidos (`visual` = { modelo, cor }).
+export default function CurriculoEditavel({ children, htmlSalvo, onSalvar, onDescartar, visual: estilo }) {
   const visual = useRef(null);
   const editor = useRef(null);
+  const palco = useRef(null);
   const [editando, setEditando] = useState(false);
   const [inicial, setInicial] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const { modelo, cor } = visualValido(estilo);
+
+  // Escala da folha conforme a largura disponível (celular): 1 no computador, menor no celular.
+  useEffect(() => {
+    const el = palco.current;
+    if (!el) return;
+    const ajustar = () => el.style.setProperty("--escala", String(Math.min(1, el.clientWidth / LARGURA_A4)));
+    ajustar();
+    const obs = new ResizeObserver(ajustar);
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   // Coloca o conteúdo no editor uma vez ao abrir (o React não controla o texto durante a edição).
   useEffect(() => {
@@ -107,14 +125,18 @@ export default function CurriculoEditavel({ children, htmlSalvo, onSalvar, onDes
 
       {editando && <p className="muted small nao-imprimir" style={{ margin: 0 }}>Selecione um trecho e use os botões (ou Ctrl+B / Ctrl+I / Ctrl+U). Para incluir ou tirar experiências, use o painel “O que entra neste currículo”.</p>}
 
-      {editando ? (
-        <div ref={editor} className="cv-editando" contentEditable suppressContentEditableWarning spellCheck={false}
-          onPaste={impedir} onDrop={impedir} onCut={impedir} onDragStart={impedir} />
-      ) : htmlSalvo ? (
-        <div dangerouslySetInnerHTML={{ __html: sanitizarHtml(htmlSalvo) }} />
-      ) : (
-        <div ref={visual}>{children}</div>
-      )}
+      <div className="cv-palco" ref={palco}>
+        <div className={`cv-tema tema-${modelo}`} style={{ "--cv-cor": cor }}>
+          {editando ? (
+            <div ref={editor} className="cv-editando" contentEditable suppressContentEditableWarning spellCheck={false}
+              onPaste={impedir} onDrop={impedir} onCut={impedir} onDragStart={impedir} />
+          ) : htmlSalvo ? (
+            <div dangerouslySetInnerHTML={{ __html: sanitizarHtml(htmlSalvo) }} />
+          ) : (
+            <div ref={visual}>{children}</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

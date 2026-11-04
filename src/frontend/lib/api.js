@@ -46,6 +46,29 @@ export function buscarVagas(params) {
   for (const [k, v] of Object.entries(params)) for (const item of [].concat(v)) if (item !== undefined && item !== "") p.append(k, item);
   return api(`/api/vagas?${p}`);
 }
-export const carregarFavoritos = async () => (await api("/api/favoritos")).favoritos;
+// Cidades de um estado (lista fixa do servidor). Guardadas na memória: não mudam.
+const cacheCidades = new Map();
+export function cidadesDoEstado(uf) {
+  if (!uf) return Promise.resolve([]);
+  if (!cacheCidades.has(uf)) {
+    cacheCidades.set(uf, api(`/api/municipios?uf=${encodeURIComponent(uf)}`).then((d) => d.cidades).catch((e) => {
+      cacheCidades.delete(uf);
+      throw e;
+    }));
+  }
+  return cacheCidades.get(uf);
+}
+
+export const carregarFavoritos =async () => (await api("/api/favoritos")).favoritos;
 export const favoritar = (vaga) => api("/api/favoritos", { metodo: "POST", corpo: { vaga } });
 export const desfavoritar = (vagaId) => api(`/api/favoritos?vaga=${encodeURIComponent(vagaId)}`, { metodo: "DELETE" });
+
+// Envia o arquivo do currículo (PDF/DOCX/TXT) e recebe os dados lidos, sem salvar nada.
+export async function importarCurriculo(arquivo) {
+  const form = new FormData();
+  form.append("arquivo", arquivo);
+  const res = await fetch("/api/importar", { method: "POST", body: form });
+  const dados = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(dados.erro || "Não foi possível ler o arquivo.");
+  return dados;
+}

@@ -9,7 +9,12 @@ import { personalizar } from "@/shared/personalizar";
 import { perfilCompleto } from "@/shared/perfil";
 import { buscarVagas, carregarCurriculos, carregarFavoritos, carregarPerfil, desfavoritar, favoritar } from "@/frontend/lib/api";
 import { guardarVagaAtual } from "@/frontend/lib/navegacao";
+import SeletorLocal from "@/frontend/components/SeletorLocal";
+import ResumoBusca from "@/frontend/components/ResumoBusca";
 import { useProtegido } from "@/frontend/hooks/useProtegido";
+
+// Raio a partir da cidade escolhida. Vagas remotas aparecem sempre, independente do local.
+const RAIOS = [[0, "Só a cidade"], [25, "Até 25 km"], [50, "Até 50 km"], [90, "Até 90 km"], [150, "Até 150 km"], [300, "Até 300 km"]];
 
 const PERIODOS = [
   [0, "Qualquer data"],
@@ -29,7 +34,7 @@ function alternar(lista, valor) {
 }
 
 // Versão no nome da chave: buscas salvas por versões antigas (com regras de filtro antigas) são ignoradas.
-const CHAVE_BUSCA = "ca:busca:v2";
+const CHAVE_BUSCA = "ca:busca:v3";
 
 const faixa = (p) => (p >= 70 ? "alta" : p >= 40 ? "media" : "baixa");
 
@@ -97,7 +102,9 @@ function Detalhes({ avaliacao }) {
 export default function Vagas() {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [local, setLocal] = useState("");
+  // Local: estado + cidade de listas fixas, e raio em km a partir da cidade.
+  const [local, setLocal] = useState({ uf: "", cidade: "" });
+  const [raio, setRaio] = useState(0);
   const [dias, setDias] = useState(0);
   const [modalidades, setModalidades] = useState([]);
   const [niveis, setNiveis] = useState([]);
@@ -113,6 +120,7 @@ export default function Vagas() {
   const [aba, setAba] = useState("busca"); // "busca" | "favoritas"
   const [ordem, setOrdem] = useState("compatibilidade");
   const [aberta, setAberta] = useState(null);
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false); // só no celular
   const [favoritas, setFavoritas] = useState(null); // Map id -> vaga
   const { dados } = useProtegido(carregar);
   const perfil = dados?.perfil;
@@ -129,7 +137,7 @@ export default function Vagas() {
     try {
       const ultima = JSON.parse(sessionStorage.getItem(CHAVE_BUSCA) || "null");
       if (ultima) {
-        setQ(ultima.q); setLocal(ultima.local); setDias(ultima.dias);
+        setQ(ultima.q); setLocal(ultima.local || { uf: "", cidade: "" }); setRaio(ultima.raio || 0); setDias(ultima.dias);
         setVagas(ultima.vagas); setFontes(ultima.fontes); setTermosArea(ultima.termosArea || []);
         if (!ultima.q && ultima.areas?.length) {
           areasBuscadas.current = [...ultima.areas].sort().join(",");
@@ -150,13 +158,13 @@ export default function Vagas() {
     try {
       // Com palavra-chave, os filtros de modalidade/nível/área são aplicados na tela (trocar sem nova busca).
       // Sem palavra-chave, as áreas marcadas viram a própria busca.
-      const data = await buscarVagas({ q, local, dias: String(dias), area: porArea ? areas : [] });
+      const data = await buscarVagas({ q, uf: local.uf, cidade: local.cidade, raio: local.cidade ? String(raio) : "", dias: String(dias), area: porArea ? areas : [] });
       areasBuscadas.current = porArea ? [...areas].sort().join(",") : "";
       setVagas(data.vagas);
       setFontes(data.fontes);
       setTermosArea(data.termos || []);
       try {
-        sessionStorage.setItem(CHAVE_BUSCA, JSON.stringify({ q, local, dias, areas: porArea ? areas : [], termosArea: data.termos || [], vagas: data.vagas, fontes: data.fontes }));
+        sessionStorage.setItem(CHAVE_BUSCA, JSON.stringify({ q, local, raio, dias, areas: porArea ? areas : [], termosArea: data.termos || [], vagas: data.vagas, fontes: data.fontes }));
       } catch { /* cota cheia */ }
     } catch (err) {
       setErro(err.message);
@@ -246,7 +254,7 @@ export default function Vagas() {
     <div className="stack">
       <div>
         <h1>Buscar vagas</h1>
-        <p className="muted" style={{ margin: 0 }}>Digite palavras-chave ou só marque uma área ao lado. Veja a compatibilidade de cada vaga, clique para ver os detalhes e gere o currículo só das que interessarem.</p>
+        <p className="muted" style={{ margin: 0 }}>Digite palavras-chave ou só marque uma área nos filtros. Veja a compatibilidade de cada vaga, clique para ver os detalhes e gere o currículo só das que interessarem.</p>
       </div>
 
       <form className="card row" onSubmit={buscar}>
@@ -254,9 +262,14 @@ export default function Vagas() {
           <label htmlFor="q">Palavras-chave</label>
           <input id="q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ex.: analista de dados, react — ou deixe vazio e marque uma área" />
         </div>
-        <div style={{ flex: 2, minWidth: 160 }}>
-          <label htmlFor="local">Cidade / estado (opcional)</label>
-          <input id="local" value={local} onChange={(e) => setLocal(e.target.value)} placeholder="São Paulo" />
+        <div style={{ flex: 3, minWidth: 260 }}>
+          <SeletorLocal uf={local.uf} cidade={local.cidade} onChange={setLocal} />
+        </div>
+        <div style={{ flex: 1, minWidth: 130 }}>
+          <label htmlFor="raio">Raio</label>
+          <select id="raio" value={raio} onChange={(e) => setRaio(Number(e.target.value))} disabled={!local.cidade} title={local.cidade ? "" : "Escolha uma cidade para usar o raio"}>
+            {RAIOS.map(([v, n]) => <option key={v} value={v}>{n}</option>)}
+          </select>
         </div>
         <div style={{ flex: 1, minWidth: 150 }}>
           <label htmlFor="dias">Publicada em</label>
@@ -275,7 +288,11 @@ export default function Vagas() {
       )}
 
       <div className="busca-layout">
-        <aside className="card filtros">
+        <aside className={`card filtros ${filtrosAbertos ? "aberto" : ""}`}>
+          <button type="button" className="btn sec filtros-alternar" onClick={() => setFiltrosAbertos(!filtrosAbertos)} aria-expanded={filtrosAbertos}>
+            Filtros{algumFiltro ? " (ativos)" : ""} {filtrosAbertos ? "▲" : "▼"}
+          </button>
+          <div className="filtros-corpo">
           <fieldset>
             <legend>Modalidade</legend>
             {MODALIDADES.map((m) => (
@@ -318,6 +335,7 @@ export default function Vagas() {
           {algumFiltro ? (
             <button className="btn sec sm" onClick={() => { setModalidades([]); setNiveis([]); setAreas([]); setSalMin(""); setSalMax(""); setSemSalario(true); }}>Limpar filtros</button>
           ) : null}
+          </div>
         </aside>
 
         <section>
@@ -339,7 +357,7 @@ export default function Vagas() {
             </label>
           </div>
 
-          {aba === "busca" && vagas === null && !carregando && <div className="card vazio">Digite palavras-chave e clique em Buscar, ou só marque uma área ao lado.</div>}
+          {aba === "busca" && vagas === null && !carregando && <div className="card vazio">Digite palavras-chave e clique em Buscar, ou só marque uma área nos filtros.</div>}
           {aba === "busca" && termosArea.length > 0 && !carregando && (
             <p className="muted small" style={{ margin: "0 0 10px" }}>Busca pela área, usando os termos: {termosArea.join(", ")}.</p>
           )}
@@ -359,6 +377,10 @@ export default function Vagas() {
             </div>
           )}
 
+          {perfilOk && !(aba === "busca" && carregando) && filtradas.length > 0 && (
+            <ResumoBusca vagas={filtradas} avaliacoes={avaliacoes} />
+          )}
+
           {!(aba === "busca" && carregando) && filtradas.map((v) => {
             const av = avaliacoes.get(v.id);
             const estaAberta = aberta === v.id;
@@ -373,7 +395,7 @@ export default function Vagas() {
                   )}
                   <button className="vaga-cabecalho" aria-expanded={estaAberta} onClick={() => setAberta(estaAberta ? null : v.id)}>
                     <h3>{v.titulo}</h3>
-                    <div className="muted small">{v.empresa} · {v.local} · {tempoRelativo(v.publicadaEm)} · via {v.fonte}</div>
+                    <div className="muted small">{v.empresa} · {v.local}{v.distanciaKm != null && v.modalidade !== "remoto" ? ` (${v.distanciaKm} km)` : ""} · {tempoRelativo(v.publicadaEm)} · via {v.fonte}</div>
                   </button>
                   <button className={`estrela ${fav ? "ativa" : ""}`} onClick={() => alternarFavorita(v)} aria-pressed={!!fav} title={fav ? "Remover das favoritas" : "Favoritar vaga"}>
                     {fav ? "★" : "☆"}
